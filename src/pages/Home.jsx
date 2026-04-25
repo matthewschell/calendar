@@ -20,8 +20,8 @@ export default function Home() {
           <CalendarGrid />
         </div>
 
-        {/* Sidebar Section (Right) */}
-        <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
+        {/* Sidebar Section (Right) - Now the entire column scrolls naturally */}
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4 hide-scrollbar">
           <MessageCentre />
           <DailyContent />
           <Leaderboard />
@@ -30,10 +30,10 @@ export default function Home() {
 
       </div>
 
-      {/* Floating Admin Button */}
+      {/* Subtle, Afterthought Admin Button tucked in bottom left */}
       <button 
         onClick={() => setShowAdmin(true)} 
-        className="fixed bottom-5 right-5 p-3 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-full shadow-2xl transition-all hover:scale-110 z-40 text-xl"
+        className="fixed bottom-3 left-3 p-2 text-white/30 hover:text-white/80 transition-all z-40 text-xl hover:rotate-90"
         title="Admin Settings"
       >
         ⚙️
