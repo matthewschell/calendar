@@ -1,5 +1,6 @@
 import Leaderboard from '../components/dashboard/Leaderboard';
 import CalendarGrid from '../components/calendar/CalendarGrid';
+import ChoresPanel from '../components/chores/ChoresPanel';
 
 export default function Home() {
   return (
@@ -22,10 +23,7 @@ export default function Home() {
         {/* Sidebar Section (Right) */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
           <Leaderboard />
-          
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg">
-            <p className="text-slate-400 font-medium text-center">Today's Chores Component Goes Here</p>
-          </div>
+          <ChoresPanel />
         </div>
 
       </div>
