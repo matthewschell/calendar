@@ -1,4 +1,5 @@
 import Leaderboard from '../components/dashboard/Leaderboard';
+import CalendarGrid from '../components/calendar/CalendarGrid';
 
 export default function Home() {
   return (
@@ -14,10 +15,8 @@ export default function Home() {
       <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5">
         
         {/* Calendar Section (Left) */}
-        <div className="flex-2 bg-white rounded-2xl shadow-2xl p-5 flex flex-col min-h-100">
-          <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl">
-            <p className="text-slate-400 font-medium">Calendar Grid Component Goes Here</p>
-          </div>
+        <div className="flex-2 flex flex-col min-h-100">
+          <CalendarGrid />
         </div>
 
         {/* Sidebar Section (Right) */}
