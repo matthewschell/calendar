@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import { useDailyCompletions } from '../../hooks/useDailyCompletions';
 
 export default function ChoresPanel() {
   const { chores, loading: choresLoading } = useChores();
   const { members, loading: membersLoading } = useFamilyMembers();
+  const { completions, loading: compsLoading, toggleCompletion } = useDailyCompletions();
   
-  // Temporary local state for the checkmarks (we will wire this to Firestore next!)
-  const [completions, setCompletions] = useState({});
+  // State for the "Who did this?" bonus chore modal
+  const [claimingChore, setClaimingChore] = useState(null);
 
-  if (choresLoading || membersLoading) {
+  if (choresLoading || membersLoading || compsLoading) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex-1 flex items-center justify-center min-h-0">
         <span className="text-slate-400 font-medium animate-pulse">Loading today's chores...</span>
@@ -18,25 +21,47 @@ export default function ChoresPanel() {
     );
   }
 
-  const toggleChore = (choreId) => {
-    setCompletions(prev => ({
-      ...prev,
-      [choreId]: !prev[choreId]
-    }));
-  };
-
   const kids = members.filter(m => m.isKid);
   const assignedChores = chores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
   const bonusChores = chores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
 
-  // Reusable mini-component for rendering a single chore card
+  const handleChoreClick = (chore) => {
+    const isDone = completions[chore.id];
+
+    // If unassigned and not done, open the "Who did this?" modal
+    if (!isDone && (chore.assignedTo === 'unassigned' || !chore.assignedTo)) {
+      setClaimingChore(chore);
+      return;
+    }
+
+    // Determine whose score to update. (If it's a bonus chore being UNCHECKED, 
+    // we would ideally track who claimed it, but for simplicity today, we'll just block unchecking bonuses).
+    if (isDone && chore.assignedTo === 'unassigned') {
+      alert("Bonus chores cannot currently be unchecked. Admin feature coming soon.");
+      return;
+    }
+
+    // Trigger atomic database update
+    toggleCompletion(chore, chore.assignedTo, isDone);
+
+    if (!isDone) {
+      confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, zIndex: 9999 });
+    }
+  };
+
+  const handleClaimBonus = (kidId) => {
+    toggleCompletion(claimingChore, kidId, false);
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 }, zIndex: 9999 });
+    setClaimingChore(null);
+  };
+
   const renderChore = (chore) => {
     const isDone = completions[chore.id];
     
     return (
       <div 
         key={chore.id}
-        onClick={() => toggleChore(chore.id)}
+        onClick={() => handleChoreClick(chore)}
         className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all ${
           isDone ? 'bg-emerald-50 border-emerald-400' : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:bg-white'
         }`}
@@ -64,7 +89,7 @@ export default function ChoresPanel() {
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex-1 overflow-y-auto min-h-0">
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex-1 overflow-y-auto min-h-0 relative">
       <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
         <span>📋</span> Today's Chores
       </h2>
@@ -99,11 +124,33 @@ export default function ChoresPanel() {
             </div>
           </div>
         )}
-
-        {assignedChores.length === 0 && bonusChores.length === 0 && (
-          <p className="text-center text-slate-400 text-sm mt-4">No chores assigned today!</p>
-        )}
       </div>
+
+      {/* Mini "Who did this?" Modal for Bonus Chores */}
+      {claimingChore && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl z-10 flex flex-col items-center justify-center p-4 text-center">
+          <h3 className="text-xl font-bold text-slate-800 mb-1">Who did this?</h3>
+          <p className="text-sm text-slate-500 mb-4 font-medium">{claimingChore.name}</p>
+          <div className="grid grid-cols-2 gap-3 w-full max-w-[250px]">
+            {kids.map(kid => (
+              <button
+                key={kid.id}
+                onClick={() => handleClaimBonus(kid.id)}
+                className="py-3 px-2 rounded-xl font-bold text-white shadow-sm transition-transform hover:scale-105"
+                style={{ backgroundColor: kid.color }}
+              >
+                {kid.name}
+              </button>
+            ))}
+          </div>
+          <button 
+            onClick={() => setClaimingChore(null)}
+            className="mt-4 text-sm font-bold text-slate-400 hover:text-slate-600"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

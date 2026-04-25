@@ -2,15 +2,14 @@ import { Trophy } from 'lucide-react';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function Leaderboard() {
-  // Call our new custom hook!
-  const { members } = useFamilyMembers();
+  const { members, loading } = useFamilyMembers();
   
-  // Filter for kids and mock some scores for testing the UI
-  const kids = members.filter(m => m.isKid);
-  const mockScores = { madison: 150, mason: 120, hudson: 95, hunter: 80 };
+  if (loading) return <div className="animate-pulse bg-white/90 rounded-2xl p-5 h-32"></div>;
 
-  // Sort kids by score descending
-  const sortedKids = [...kids].sort((a, b) => (mockScores[b.id] || 0) - (mockScores[a.id] || 0));
+  const kids = members.filter(m => m.isKid);
+
+  // Sort kids by their REAL score descending (defaulting to 0 if they have no score yet)
+  const sortedKids = [...kids].sort((a, b) => (b.score || 0) - (a.score || 0));
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg">
@@ -20,7 +19,7 @@ export default function Leaderboard() {
       
       <div className="flex flex-col gap-2">
         {sortedKids.map((kid, index) => {
-          const isFirst = index === 0;
+          const isFirst = index === 0 && (kid.score || 0) > 0;
           return (
             <div 
               key={kid.id} 
@@ -38,11 +37,14 @@ export default function Leaderboard() {
                 <span className="font-semibold text-slate-700">{kid.name}</span>
               </div>
               <div className="font-bold text-amber-500 text-lg">
-                {mockScores[kid.id] || 0} ⭐
+                {kid.score || 0} ⭐
               </div>
             </div>
           );
         })}
+        {sortedKids.length === 0 && (
+          <p className="text-center text-slate-400 text-sm">No kids found.</p>
+        )}
       </div>
     </div>
   );
