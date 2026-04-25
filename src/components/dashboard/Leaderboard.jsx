@@ -1,4 +1,4 @@
-import { Trophy, Medal } from 'lucide-react';
+import { Trophy, Medal, AlertCircle } from 'lucide-react';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function Leaderboard() {
@@ -17,9 +17,9 @@ export default function Leaderboard() {
     );
   }
 
-  // Filter for kids only and sort them by points (highest to lowest)
+  // Pure, generic filter: strictly relies on the database flag
   const kids = members
-    .filter(m => m.isKid)
+    .filter(m => m.isKid === true || m.isKid === "true")
     .sort((a, b) => (b.points || 0) - (a.points || 0));
 
   return (
@@ -32,42 +32,50 @@ export default function Leaderboard() {
       </h2>
       
       <div className="flex flex-col gap-3 relative z-10">
-        {kids.map((kid, index) => {
-          // Assign medals based on sorted position
-          let MedalIcon = null;
-          let medalColor = '';
-          if (index === 0) { MedalIcon = Medal; medalColor = 'text-yellow-500'; }
-          else if (index === 1) { MedalIcon = Medal; medalColor = 'text-slate-400'; }
-          else if (index === 2) { MedalIcon = Medal; medalColor = 'text-amber-700'; }
+        {kids.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+            <AlertCircle className="w-8 h-8 text-slate-400 mb-2" />
+            <span className="text-sm font-bold text-slate-600">No kids found!</span>
+            <span className="text-xs text-slate-500 mt-1">Check the Admin Panel to assign the 'kid' role to members.</span>
+          </div>
+        ) : (
+          kids.map((kid, index) => {
+            // Assign medals based on sorted position
+            let MedalIcon = null;
+            let medalColor = '';
+            if (index === 0) { MedalIcon = Medal; medalColor = 'text-yellow-500'; }
+            else if (index === 1) { MedalIcon = Medal; medalColor = 'text-slate-400'; }
+            else if (index === 2) { MedalIcon = Medal; medalColor = 'text-amber-700'; }
 
-          return (
-            <div 
-              key={kid.id}
-              className="flex items-center justify-between p-3 rounded-xl border-2 transition-transform hover:scale-105 bg-white"
-              style={{ borderColor: `${kid.color}30` }}
-            >
-              <div className="flex items-center gap-3">
-                {/* Avatar Placeholder (Falls back to initial if no avatar URL exists) */}
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1"
-                  style={{ backgroundColor: kid.color, ringColor: kid.color }}
-                >
-                  {kid.avatar ? (
-                    <img src={kid.avatar} alt={kid.name} className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    kid.name.charAt(0).toUpperCase()
-                  )}
+            return (
+              <div 
+                key={kid.id}
+                className="flex items-center justify-between p-3 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm"
+                style={{ borderColor: `${kid.color}40` }}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar Placeholder */}
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1"
+                    style={{ backgroundColor: kid.color || '#cbd5e1', '--tw-ring-color': kid.color || '#cbd5e1' }}
+                  >
+                    {kid.avatar ? (
+                      <img src={kid.avatar} alt={kid.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      (kid.name || '?').charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span className="font-bold text-slate-700">{kid.name}</span>
                 </div>
-                <span className="font-bold text-slate-700">{kid.name}</span>
+                
+                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                  <span className="text-lg font-black text-slate-800">{kid.points || 0}</span>
+                  {MedalIcon && <MedalIcon className={`w-5 h-5 drop-shadow-sm ${medalColor}`} />}
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                <span className="text-lg font-black text-slate-800">{kid.points || 0}</span>
-                {MedalIcon && <MedalIcon className={`w-5 h-5 drop-shadow-sm ${medalColor}`} />}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );
