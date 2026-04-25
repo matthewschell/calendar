@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Database } from 'lucide-react';
+import { writeBatch, doc, collection } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
 
@@ -9,6 +12,7 @@ export default function AdminModal({ isOpen, onClose }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [activeTab, setActiveTab] = useState('members');
+  const [isMigrating, setIsMigrating] = useState(false);
 
   if (!isOpen) return null;
 
@@ -20,6 +24,44 @@ export default function AdminModal({ isOpen, onClose }) {
     } else {
       alert('Incorrect PIN');
       setPin('');
+    }
+  };
+
+  // The Temporary Migration Function
+  const handleMigrateFacts = async () => {
+    if (!confirm("This will push all facts from your local JSON into Firestore. Ready?")) return;
+    
+    setIsMigrating(true);
+    try {
+      const batch = writeBatch(db);
+      const dailyRef = collection(db, 'dailyContent');
+
+      factsData.forEach((item) => {
+        if (item.startsWith('[')) {
+          // Extract the date like "01-01" from "[01-01] <b>🎆 Happy..."
+          const dateMatch = item.match(/\[(\d{2}-\d{2})\]/);
+          if (dateMatch) {
+            const dateId = dateMatch[1]; 
+            const text = item.replace(`[${dateId}]`, '').trim();
+            
+            // Set document ID explicitly to the date (e.g., "04-25")
+            const docRef = doc(dailyRef, dateId);
+            batch.set(docRef, { type: 'override', text, date: dateId });
+          }
+        } else {
+          // It's a standard random fact, let Firestore auto-generate the ID
+          const docRef = doc(dailyRef); 
+          batch.set(docRef, { type: 'fact', text: item });
+        }
+      });
+
+      await batch.commit();
+      alert("✅ Migration complete! 100+ facts and events are now in the cloud.");
+    } catch (error) {
+      console.error("Migration failed:", error);
+      alert("Failed to migrate data. Check console.");
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -77,7 +119,7 @@ export default function AdminModal({ isOpen, onClose }) {
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
-            <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Advanced Settings" />
+            <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Database className="w-5 h-5" />} label="Database Tools" />
           </div>
 
           {/* Tab Content Panel */}
@@ -94,8 +136,21 @@ export default function AdminModal({ isOpen, onClose }) {
             
             {activeTab === 'settings' && (
               <div>
-                <h3 className="text-xl font-bold mb-4 text-slate-800">🔧 Advanced Settings</h3>
-                <p className="text-slate-500">Settings component goes here.</p>
+                <h3 className="text-xl font-bold mb-4 text-slate-800">🔧 Database Tools</h3>
+                
+                <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm mt-4">
+                  <h4 className="font-bold text-slate-800 mb-2">Migrate Local Facts to Firestore</h4>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Push your local facts.json file into the cloud database. You only need to run this once.
+                  </p>
+                  <button 
+                    onClick={handleMigrateFacts}
+                    disabled={isMigrating}
+                    className="py-2 px-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {isMigrating ? 'Migrating Data...' : 'Run Migration Script'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -106,7 +161,6 @@ export default function AdminModal({ isOpen, onClose }) {
   );
 }
 
-// Mini helper component for the sidebar buttons
 function TabButton({ active, onClick, icon, label }) {
   return (
     <button
