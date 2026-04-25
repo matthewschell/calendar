@@ -131,7 +131,7 @@ export default function ChoresPanel() {
         <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl z-10 flex flex-col items-center justify-center p-4 text-center">
           <h3 className="text-xl font-bold text-slate-800 mb-1">Who did this?</h3>
           <p className="text-sm text-slate-500 mb-4 font-medium">{claimingChore.name}</p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-[250px]">
+          <div className="grid grid-cols-2 gap-3 w-full max-w-">
             {kids.map(kid => (
               <button
                 key={kid.id}
