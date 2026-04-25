@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Settings, Users, ClipboardList, Palette } from 'lucide-react';
 import FamilyMembersTab from './FamilyMembersTab';
+import ChoresTab from './ChoresTab';
 
 const ADMIN_PIN = "8486";
 
@@ -82,15 +83,7 @@ export default function AdminModal({ isOpen, onClose }) {
           {/* Tab Content Panel */}
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
             {activeTab === 'members' && <FamilyMembersTab />}
-            
-            {activeTab === 'chores' && (
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-slate-800">📋 Chores Management</h3>
-                <div className="p-8 border-2 border-dashed border-slate-300 rounded-2xl text-center text-slate-500 font-medium">
-                  We will build the Chores list here soon.
-                </div>
-              </div>
-            )}
+            {activeTab === 'chores' && <ChoresTab />}
             
             {activeTab === 'theme' && (
               <div>
