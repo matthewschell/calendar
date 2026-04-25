@@ -17,9 +17,9 @@ export default function Leaderboard() {
     );
   }
 
-  // Pure, generic filter: strictly relies on the database flag
+  // Bulletproof truthy check. If isKid exists and is "true" (in any format), they go on the board.
   const kids = members
-    .filter(m => m.isKid === true || m.isKid === "true")
+    .filter(m => m.isKid)
     .sort((a, b) => (b.points || 0) - (a.points || 0));
 
   return (
