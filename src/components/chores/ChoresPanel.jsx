@@ -1,10 +1,22 @@
 import { useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { DEFAULT_CHORES, DEFAULT_MEMBERS } from '../../constants/defaults';
+import { useChores } from '../../hooks/useChores';
+import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function ChoresPanel() {
-  // Temporary local state to make the UI interactive before we add Firestore
+  const { chores, loading: choresLoading } = useChores();
+  const { members, loading: membersLoading } = useFamilyMembers();
+  
+  // Temporary local state for the checkmarks (we will wire this to Firestore next!)
   const [completions, setCompletions] = useState({});
+
+  if (choresLoading || membersLoading) {
+    return (
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex-1 flex items-center justify-center min-h-0">
+        <span className="text-slate-400 font-medium animate-pulse">Loading today's chores...</span>
+      </div>
+    );
+  }
 
   const toggleChore = (choreId) => {
     setCompletions(prev => ({
@@ -13,9 +25,9 @@ export default function ChoresPanel() {
     }));
   };
 
-  const kids = DEFAULT_MEMBERS.filter(m => m.isKid);
-  const assignedChores = DEFAULT_CHORES.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
-  const bonusChores = DEFAULT_CHORES.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
+  const kids = members.filter(m => m.isKid);
+  const assignedChores = chores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
+  const bonusChores = chores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
 
   // Reusable mini-component for rendering a single chore card
   const renderChore = (chore) => {
@@ -40,7 +52,7 @@ export default function ChoresPanel() {
               {chore.name}
             </div>
             <div className="text-xs text-slate-400 mt-0.5">
-              {chore.assignedTo === 'unassigned' ? '⭐ Bonus' : DEFAULT_MEMBERS.find(m => m.id === chore.assignedTo)?.name}
+              {chore.assignedTo === 'unassigned' ? '⭐ Bonus' : members.find(m => m.id === chore.assignedTo)?.name}
             </div>
           </div>
         </div>
@@ -86,6 +98,10 @@ export default function ChoresPanel() {
               {bonusChores.map(renderChore)}
             </div>
           </div>
+        )}
+
+        {assignedChores.length === 0 && bonusChores.length === 0 && (
+          <p className="text-center text-slate-400 text-sm mt-4">No chores assigned today!</p>
         )}
       </div>
     </div>
