@@ -1,9 +1,12 @@
 import { Trophy } from 'lucide-react';
-import { DEFAULT_MEMBERS } from '../../constants/defaults';
+import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function Leaderboard() {
+  // Call our new custom hook!
+  const { members } = useFamilyMembers();
+  
   // Filter for kids and mock some scores for testing the UI
-  const kids = DEFAULT_MEMBERS.filter(m => m.isKid);
+  const kids = members.filter(m => m.isKid);
   const mockScores = { madison: 150, mason: 120, hudson: 95, hunter: 80 };
 
   // Sort kids by score descending
