@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Settings, Users, ClipboardList, Palette, Database } from 'lucide-react';
 import { writeBatch, doc, collection } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-
+import FactsTab from './FactsTab';
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
 
@@ -119,8 +119,7 @@ export default function AdminModal({ isOpen, onClose }) {
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
-            <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Database className="w-5 h-5" />} label="Database Tools" />
-          </div>
+<TabButton active={activeTab === 'facts'} onClick={() => setActiveTab('facts')} icon={<Lightbulb className="w-5 h-5" />} label="Facts & Events" />          </div>
 
           {/* Tab Content Panel */}
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
@@ -134,25 +133,7 @@ export default function AdminModal({ isOpen, onClose }) {
               </div>
             )}
             
-            {activeTab === 'settings' && (
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-slate-800">🔧 Database Tools</h3>
-                
-                <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm mt-4">
-                  <h4 className="font-bold text-slate-800 mb-2">Migrate Local Facts to Firestore</h4>
-                  <p className="text-sm text-slate-500 mb-4">
-                    Push your local facts.json file into the cloud database. You only need to run this once.
-                  </p>
-                  <button 
-                    onClick={handleMigrateFacts}
-                    disabled={isMigrating}
-                    className="py-2 px-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  >
-                    {isMigrating ? 'Migrating Data...' : 'Run Migration Script'}
-                  </button>
-                </div>
-              </div>
-            )}
+            {activeTab === 'facts' && <FactsTab />}
           </div>
 
         </div>
