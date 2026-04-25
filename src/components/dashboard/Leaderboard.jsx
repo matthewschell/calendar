@@ -1,50 +1,73 @@
-import { Trophy } from 'lucide-react';
+import { Trophy, Medal } from 'lucide-react';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function Leaderboard() {
   const { members, loading } = useFamilyMembers();
-  
-  if (loading) return <div className="animate-pulse bg-white/90 rounded-2xl p-5 h-32"></div>;
 
-  const kids = members.filter(m => m.isKid);
+  if (loading) {
+    return (
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse">
+        <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
+        <div className="space-y-3">
+          <div className="h-14 bg-slate-100 rounded-xl"></div>
+          <div className="h-14 bg-slate-100 rounded-xl"></div>
+          <div className="h-14 bg-slate-100 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
 
-  // Sort kids by their REAL score descending (defaulting to 0 if they have no score yet)
-  const sortedKids = [...kids].sort((a, b) => (b.score || 0) - (a.score || 0));
+  // Filter for kids only and sort them by points (highest to lowest)
+  const kids = members
+    .filter(m => m.isKid)
+    .sort((a, b) => (b.points || 0) - (a.points || 0));
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg">
-      <h2 className="flex items-center gap-2 text-xl font-bold text-slate-800 mb-4">
-        <Trophy className="text-amber-500 w-6 h-6" /> Leaderboard
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden">
+      {/* Decorative background glow */}
+      <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl"></div>
+      
+      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2 relative z-10">
+        <Trophy className="text-amber-500 w-6 h-6" /> Live Leaderboard
       </h2>
       
-      <div className="flex flex-col gap-2">
-        {sortedKids.map((kid, index) => {
-          const isFirst = index === 0 && (kid.score || 0) > 0;
+      <div className="flex flex-col gap-3 relative z-10">
+        {kids.map((kid, index) => {
+          // Assign medals based on sorted position
+          let MedalIcon = null;
+          let medalColor = '';
+          if (index === 0) { MedalIcon = Medal; medalColor = 'text-yellow-500'; }
+          else if (index === 1) { MedalIcon = Medal; medalColor = 'text-slate-400'; }
+          else if (index === 2) { MedalIcon = Medal; medalColor = 'text-amber-700'; }
+
           return (
             <div 
-              key={kid.id} 
-              className={`flex justify-between items-center p-3 rounded-xl border-2 transition-transform hover:scale-[1.02] cursor-pointer ${
-                isFirst ? 'bg-amber-50 border-amber-400' : 'bg-slate-50 border-slate-100'
-              }`}
+              key={kid.id}
+              className="flex items-center justify-between p-3 rounded-xl border-2 transition-transform hover:scale-105 bg-white"
+              style={{ borderColor: `${kid.color}30` }}
             >
               <div className="flex items-center gap-3">
+                {/* Avatar Placeholder (Falls back to initial if no avatar URL exists) */}
                 <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
-                  style={{ backgroundColor: kid.color }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1"
+                  style={{ backgroundColor: kid.color, ringColor: kid.color }}
                 >
-                  {kid.name.charAt(0)}
+                  {kid.avatar ? (
+                    <img src={kid.avatar} alt={kid.name} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    kid.name.charAt(0).toUpperCase()
+                  )}
                 </div>
-                <span className="font-semibold text-slate-700">{kid.name}</span>
+                <span className="font-bold text-slate-700">{kid.name}</span>
               </div>
-              <div className="font-bold text-amber-500 text-lg">
-                {kid.score || 0} ⭐
+              
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                <span className="text-lg font-black text-slate-800">{kid.points || 0}</span>
+                {MedalIcon && <MedalIcon className={`w-5 h-5 drop-shadow-sm ${medalColor}`} />}
               </div>
             </div>
           );
         })}
-        {sortedKids.length === 0 && (
-          <p className="text-center text-slate-400 text-sm">No kids found.</p>
-        )}
       </div>
     </div>
   );
