@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import { HOLIDAYS_DATA } from '../../utils/holidays';
 import EventModal from './EventModal';
 
 export default function CalendarGrid() {
@@ -28,6 +29,13 @@ export default function CalendarGrid() {
 
   const isCurrentMonth = new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
 
+  // Helper to combine database events and generated holidays
+  const getEventsForDate = (dateString) => {
+    const calendarEvents = events.filter(e => e.date === dateString);
+    const holidayEvents = HOLIDAYS_DATA.filter(h => h.date === dateString);
+    return [...holidayEvents, ...calendarEvents];
+  };
+
   // Helper to determine the background color of an event
   const getEventBackground = (event) => {
     if (!event.member || !members.length) return '#cbd5e1'; 
@@ -51,22 +59,20 @@ export default function CalendarGrid() {
     return '#cbd5e1';
   };
 
-  // Open modal for a new event on a specific date
   const handleDayClick = (dateObj) => {
     setSelectedDate(dateObj);
     setEditingEvent(null);
     setIsModalOpen(true);
   };
 
-  // Open modal to edit an existing event
   const handleEventClick = (e, event) => {
-    e.stopPropagation(); // Prevent the day click from firing
+    e.stopPropagation(); 
+    if (event.isHoliday) return; // Don't open the modal for hardcoded holidays
     setSelectedDate(null);
     setEditingEvent(event);
     setIsModalOpen(true);
   };
 
-  // Floating Action Button logic for mobile
   const handleFabClick = () => {
     setSelectedDate(new Date());
     setEditingEvent(null);
@@ -119,7 +125,8 @@ export default function CalendarGrid() {
             const dateString = dateObj.toDateString();
             const isToday = dateString === todayStr;
 
-            const dayEvents = events.filter(e => e.date === dateString);
+            // Fetch both holidays and db events for this day
+            const dayEvents = getEventsForDate(dateString);
 
             return (
               <div 
@@ -146,7 +153,7 @@ export default function CalendarGrid() {
                       <div 
                         key={event.id} 
                         onClick={(e) => handleEventClick(e, event)}
-                        className="max-w-full overflow-hidden text-[10px] md:text-xs px-1.5 py-0.5 rounded text-white truncate font-medium shadow-sm transition-transform hover:scale-105 cursor-pointer"
+                        className={`max-w-full overflow-hidden text-[10px] md:text-xs px-1.5 py-0.5 rounded text-white truncate font-medium shadow-sm transition-transform ${!event.isHoliday ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}`}
                         style={{ 
                           background: getEventBackground(event),
                           color: isMisc ? '#475569' : 'white',
@@ -166,7 +173,6 @@ export default function CalendarGrid() {
         </div>
       </div>
 
-      {/* Floating Action Button (Mobile Friendly) */}
       <button 
         onClick={handleFabClick}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-105 transition-transform z-40"
@@ -174,7 +180,6 @@ export default function CalendarGrid() {
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* Render the Modal */}
       <EventModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
