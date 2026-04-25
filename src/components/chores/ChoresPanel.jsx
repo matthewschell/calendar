@@ -89,7 +89,7 @@ export default function ChoresPanel() {
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex-1 overflow-y-auto min-h-0 relative">
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative">
       <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
         <span>📋</span> Today's Chores
       </h2>
@@ -131,7 +131,7 @@ export default function ChoresPanel() {
         <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl z-10 flex flex-col items-center justify-center p-4 text-center">
           <h3 className="text-xl font-bold text-slate-800 mb-1">Who did this?</h3>
           <p className="text-sm text-slate-500 mb-4 font-medium">{claimingChore.name}</p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-">
+          <div className="grid grid-cols-2 gap-3 w-full max-w-62.5">
             {kids.map(kid => (
               <button
                 key={kid.id}
