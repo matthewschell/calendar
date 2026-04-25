@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { useEvents } from '../../hooks/useEvents';
+import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function CalendarGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Bring in our live data hooks
+  const { events, loading: eventsLoading } = useEvents();
+  const { members, loading: membersLoading } = useFamilyMembers();
 
-  // Standard calendar math (ported from your legacy index.html)
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const startingDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
   
@@ -16,6 +21,34 @@ export default function CalendarGrid() {
   const goToToday = () => setCurrentDate(new Date());
 
   const isCurrentMonth = new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
+
+  // Helper to determine the background color of an event based on who is tagged
+  const getEventBackground = (event) => {
+    if (!event.member || !members.length) return '#cbd5e1'; // slate-300 fallback
+    
+    // Make sure we are working with an array
+    const memberIds = Array.isArray(event.member) ? event.member : [event.member];
+    
+    if (memberIds.includes('family')) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; // Family gradient
+    if (memberIds.includes('misc')) return 'transparent';
+    
+    // Single member color
+    if (memberIds.length === 1) {
+      const member = members.find(m => m.id === memberIds[0]);
+      return member ? member.color : '#cbd5e1';
+    }
+    
+    // Multiple members? Build a striped/gradient background!
+    const colors = memberIds
+      .filter(id => id !== 'family' && id !== 'misc')
+      .map(id => members.find(m => m.id === id)?.color || '#cbd5e1');
+      
+    if (colors.length > 0) {
+      return `linear-gradient(90deg, ${colors.join(', ')})`;
+    }
+    
+    return '#cbd5e1';
+  };
 
   return (
     <div className="flex flex-col bg-white/90 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-lg h-full min-h-0">
@@ -32,7 +65,6 @@ export default function CalendarGrid() {
         <div className="flex flex-col items-center">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{monthName}</h2>
           
-          {/* Quick "Back to Today" button that only shows if you navigate away */}
           <div className="h-6 mt-1 flex items-center justify-center">
             {!isCurrentMonth && (
               <button 
@@ -70,12 +102,16 @@ export default function CalendarGrid() {
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
           const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-          const isToday = dateObj.toDateString() === todayStr;
+          const dateString = dateObj.toDateString();
+          const isToday = dateString === todayStr;
+
+          // Filter events for this specific day
+          const dayEvents = events.filter(e => e.date === dateString);
 
           return (
             <div 
               key={day} 
-              onClick={() => alert(`You clicked on ${dateObj.toDateString()}! Event modal coming next.`)}
+              onClick={() => alert(`You clicked on ${dateString}! Add Event modal coming next.`)}
               className={`relative flex flex-col p-1 md:p-2 rounded-xl border-2 transition-colors cursor-pointer overflow-hidden ${
                 isToday 
                   ? 'bg-amber-50 border-amber-300 shadow-sm ring-2 ring-amber-100 ring-offset-1' 
@@ -90,9 +126,28 @@ export default function CalendarGrid() {
                 {day}
               </span>
               
-              {/* Event rendering container (empty for now) */}
+              {/* Render the events */}
               <div className="flex-1 mt-1 overflow-y-auto hide-scrollbar flex flex-col gap-1">
-                {/* Real events will be mapped here soon! */}
+                {!eventsLoading && !membersLoading && dayEvents.map(event => {
+                  const isMisc = Array.isArray(event.member) && event.member.includes('misc');
+                  
+                  return (
+                    <div 
+                      key={event.id} 
+                      onClick={(e) => { e.stopPropagation(); alert(`Editing ${event.title}... UI coming next!`); }}
+                      className="max-w-full overflow-hidden text-[10px] md:text-xs px-1.5 py-0.5 rounded text-white truncate font-medium shadow-sm transition-transform hover:scale-105"
+                      style={{ 
+                        background: getEventBackground(event),
+                        color: isMisc ? '#475569' : 'white', // slate-600 for misc text
+                        border: isMisc ? '1px solid #cbd5e1' : 'none'
+                      }}
+                      title={event.title}
+                    >
+                      {event.time && <span className="opacity-80 mr-1">{event.time}</span>}
+                      {event.title}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
