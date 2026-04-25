@@ -21,7 +21,6 @@ export default function DailyContent() {
         setWeatherLoading(false);
       }
     };
-
     fetchWeather();
   }, []);
 
@@ -44,9 +43,7 @@ export default function DailyContent() {
     );
   }
 
-  // Dynamic styling based on the content type our hook returned
   let config = { icon: <Lightbulb className="w-4 h-4" />, title: 'Fact of the Day', border: 'border-indigo-400', text: 'text-indigo-400' };
-  
   if (content.type === 'override') {
     config = { icon: <Star className="w-4 h-4" />, title: 'Special Day!', border: 'border-amber-400', text: 'text-amber-500' };
   } else if (content.type === 'joke') {
@@ -55,35 +52,25 @@ export default function DailyContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Weather Card */}
-      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-5 shadow-lg text-white relative overflow-hidden">
+      <div className="bg-linear-to-br from-sky-400 to-blue-500 rounded-2xl p-5 shadow-lg text-white relative overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <h3 className="text-sky-100 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
               <CloudSun className="w-4 h-4" /> Local Weather
             </h3>
-            <div className="text-3xl font-bold">
-              {Math.round(weather?.temperature_2m || 0)}°C
-            </div>
+            <div className="text-3xl font-bold">{Math.round(weather?.temperature_2m || 0)}°C</div>
             <div className="text-sky-100 text-sm mt-1">Whitby, ON</div>
           </div>
-          <div className="text-5xl drop-shadow-md">
-            {getWeatherEmoji(weather?.weather_code)}
-          </div>
+          <div className="text-5xl drop-shadow-md">{getWeatherEmoji(weather?.weather_code)}</div>
         </div>
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Daily Content Card */}
       <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${config.border}`}>
         <h3 className={`${config.text} font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2`}>
           {config.icon} {config.title}
         </h3>
-        {/* Safely render HTML tags (like <b> and <br>) from your overrides */}
-        <div 
-          className="text-slate-700 font-medium text-sm leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: content.text }}
-        />
+        <div className="text-slate-700 font-medium text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: content.text }} />
       </div>
     </div>
   );
