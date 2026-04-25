@@ -4,17 +4,21 @@ import { useEvents } from '../../hooks/useEvents';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 import { HOLIDAYS_DATA } from '../../utils/holidays';
 import EventModal from './EventModal';
+import DayViewModal from './DayViewModal';
 
 export default function CalendarGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
   
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Modal States
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isDayViewOpen, setIsDayViewOpen] = useState(false);
+  
   const [selectedDate, setSelectedDate] = useState(null);
+  const [dayViewDate, setDayViewDate] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   
-  // Live Data Hooks
-  const { events, loading: eventsLoading } = useEvents();
+  // Live Data Hooks (Extracted delete functions)
+  const { events, loading: eventsLoading, deleteEvent, deleteEventGroup } = useEvents();
   const { members, loading: membersLoading } = useFamilyMembers();
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -36,7 +40,6 @@ export default function CalendarGrid() {
     return [...holidayEvents, ...calendarEvents];
   };
 
-  // Helper to determine the background color of an event
   const getEventBackground = (event) => {
     if (!event.member || !members.length) return '#cbd5e1'; 
     
@@ -59,24 +62,42 @@ export default function CalendarGrid() {
     return '#cbd5e1';
   };
 
+  // Click Handlers
   const handleDayClick = (dateObj) => {
-    setSelectedDate(dateObj);
-    setEditingEvent(null);
-    setIsModalOpen(true);
+    setDayViewDate(dateObj);
+    setIsDayViewOpen(true);
   };
 
-  const handleEventClick = (e, event) => {
-    e.stopPropagation(); 
-    if (event.isHoliday) return; // Don't open the modal for hardcoded holidays
+  const handleEditEventFromDayView = (event) => {
     setSelectedDate(null);
     setEditingEvent(event);
-    setIsModalOpen(true);
+    setIsDayViewOpen(false);
+    setIsEventModalOpen(true);
+  };
+
+  const handleAddEventFromDayView = (date) => {
+    setSelectedDate(date);
+    setEditingEvent(null);
+    setIsDayViewOpen(false);
+    setIsEventModalOpen(true);
+  };
+
+  const handleDeleteEventFromDayView = (eventId, title) => {
+    if (window.confirm(`Delete "${title}"?`)) {
+      deleteEvent(eventId);
+    }
+  };
+
+  const handleDeleteGroupFromDayView = (groupId, title) => {
+    if (window.confirm(`This is a multi-day event. This will delete ALL days for "${title}". Are you sure?`)) {
+      deleteEventGroup(groupId);
+    }
   };
 
   const handleFabClick = () => {
     setSelectedDate(new Date());
     setEditingEvent(null);
-    setIsModalOpen(true);
+    setIsEventModalOpen(true);
   };
 
   return (
@@ -105,27 +126,21 @@ export default function CalendarGrid() {
           </button>
         </div>
 
-        {/* Days of the Week Header */}
         <div className="grid grid-cols-7 text-center font-bold text-slate-400 text-xs md:text-sm mb-2 shrink-0">
           <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
         </div>
 
-        {/* Main Calendar Grid */}
         <div className="grid grid-cols-7 gap-1 md:gap-2 flex-1 auto-rows-fr min-h-0">
-          
-          {/* Empty Padding */}
           {Array.from({ length: startingDayOfWeek }).map((_, i) => (
             <div key={`empty-${i}`} className="rounded-xl border-2 border-transparent bg-white/30"></div>
           ))}
           
-          {/* Actual Days */}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
             const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dateString = dateObj.toDateString();
             const isToday = dateString === todayStr;
 
-            // Fetch both holidays and db events for this day
             const dayEvents = getEventsForDate(dateString);
 
             return (
@@ -144,7 +159,6 @@ export default function CalendarGrid() {
                   {day}
                 </span>
                 
-                {/* Events list */}
                 <div className="flex-1 mt-1 overflow-y-auto hide-scrollbar flex flex-col gap-1">
                   {!eventsLoading && !membersLoading && dayEvents.map(event => {
                     const isMisc = Array.isArray(event.member) && event.member.includes('misc');
@@ -152,8 +166,13 @@ export default function CalendarGrid() {
                     return (
                       <div 
                         key={event.id} 
-                        onClick={(e) => handleEventClick(e, event)}
-                        className={`max-w-full overflow-hidden text-[10px] md:text-xs px-1.5 py-0.5 rounded text-white truncate font-medium shadow-sm transition-transform ${!event.isHoliday ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}`}
+                        onClick={(e) => {
+                          // Prevent day click from firing when clicking an event badge
+                          // We open the Day View manually here to replicate legacy behavior
+                          e.stopPropagation();
+                          handleDayClick(dateObj);
+                        }}
+                        className={`max-w-full overflow-hidden text-[10px] md:text-xs px-1.5 py-0.5 rounded text-white truncate font-medium shadow-sm transition-transform hover:scale-105 cursor-pointer`}
                         style={{ 
                           background: getEventBackground(event),
                           color: isMisc ? '#475569' : 'white',
@@ -180,12 +199,25 @@ export default function CalendarGrid() {
         <Plus className="w-8 h-8" />
       </button>
 
+      {/* Render the Modals */}
       <EventModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={isEventModalOpen} 
+        onClose={() => setIsEventModalOpen(false)} 
         selectedDate={selectedDate}
         existingEvent={editingEvent}
         members={members}
+      />
+
+      <DayViewModal
+        isOpen={isDayViewOpen}
+        onClose={() => setIsDayViewOpen(false)}
+        date={dayViewDate}
+        events={dayViewDate ? getEventsForDate(dayViewDate.toDateString()) : []}
+        members={members}
+        onAddEvent={handleAddEventFromDayView}
+        onEditEvent={handleEditEventFromDayView}
+        onDeleteEvent={handleDeleteEventFromDayView}
+        onDeleteEventGroup={handleDeleteGroupFromDayView}
       />
     </>
   );
