@@ -1,76 +1,98 @@
 import { useState } from 'react';
-import { getCalendarData, DAYS_OF_WEEK } from '../../utils/dateHelpers';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 export default function CalendarGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { daysInMonth, startingDayOfWeek, monthName, todayStr, year, month } = getCalendarData(currentDate);
+  // Standard calendar math (ported from your legacy index.html)
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const startingDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  
+  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const todayStr = new Date().toDateString();
 
-  // Handlers for month navigation
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-  const goToday = () => setCurrentDate(new Date());
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const goToToday = () => setCurrentDate(new Date());
+
+  const isCurrentMonth = new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+    <div className="flex flex-col bg-white/90 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-lg h-full min-h-0">
       
-      {/* Calendar Header */}
-      <div className="flex justify-between items-center p-4 border-b border-slate-200">
-        <button onClick={prevMonth} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
-          ◀
+      {/* Header Controls */}
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          onClick={prevMonth} 
+          className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-indigo-600 rounded-xl transition-colors font-bold flex items-center justify-center"
+        >
+          <ChevronLeft className="w-6 h-6" />
         </button>
+        
         <div className="flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-slate-800">{monthName}</h2>
-          <button 
-            onClick={goToday}
-            className="text-xs font-bold text-indigo-500 hover:text-indigo-600 mt-1 uppercase tracking-wider"
-          >
-            ↩ Today
-          </button>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{monthName}</h2>
+          
+          {/* Quick "Back to Today" button that only shows if you navigate away */}
+          <div className="h-6 mt-1 flex items-center justify-center">
+            {!isCurrentMonth && (
+              <button 
+                onClick={goToToday} 
+                className="flex items-center gap-1 text-xs font-bold text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-colors animate-in fade-in zoom-in duration-300"
+              >
+                <CalendarIcon className="w-3 h-3" /> Back to Today
+              </button>
+            )}
+          </div>
         </div>
-        <button onClick={nextMonth} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
-          ▶
+
+        <button 
+          onClick={nextMonth} 
+          className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-indigo-600 rounded-xl transition-colors font-bold flex items-center justify-center"
+        >
+          <ChevronRight className="w-6 h-6" />
         </button>
       </div>
 
       {/* Days of the Week Header */}
-      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-        {DAYS_OF_WEEK.map(day => (
-          <div key={day} className="py-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {day}
-          </div>
-        ))}
+      <div className="grid grid-cols-7 text-center font-bold text-slate-400 text-xs md:text-sm mb-2 shrink-0">
+        <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
       </div>
 
-      {/* The Grid */}
-      <div className="flex-1 grid grid-cols-7 auto-rows-fr">
-        {/* Empty cells for days before the 1st */}
-        {[...Array(startingDayOfWeek)].map((_, i) => (
-          <div key={`empty-${i}`} className="border-b border-r border-slate-100 bg-slate-50/50" />
+      {/* Main Calendar Grid */}
+      <div className="grid grid-cols-7 gap-1 md:gap-2 flex-1 auto-rows-fr min-h-0">
+        
+        {/* Empty slots for the start of the month padding */}
+        {Array.from({ length: startingDayOfWeek }).map((_, i) => (
+          <div key={`empty-${i}`} className="rounded-xl border-2 border-transparent bg-white/30"></div>
         ))}
         
-        {/* Actual days of the month */}
-        {[...Array(daysInMonth)].map((_, i) => {
-          const dayNumber = i + 1;
-          const dateObj = new Date(year, month, dayNumber);
+        {/* Actual Days */}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
           const isToday = dateObj.toDateString() === todayStr;
 
           return (
             <div 
-              key={dayNumber} 
-              className={`border-b border-r border-slate-100 p-1 md:p-2 relative group cursor-pointer hover:bg-slate-50 transition-colors ${
-                isToday ? 'bg-indigo-50/30' : ''
+              key={day} 
+              onClick={() => alert(`You clicked on ${dateObj.toDateString()}! Event modal coming next.`)}
+              className={`relative flex flex-col p-1 md:p-2 rounded-xl border-2 transition-colors cursor-pointer overflow-hidden ${
+                isToday 
+                  ? 'bg-amber-50 border-amber-300 shadow-sm ring-2 ring-amber-100 ring-offset-1' 
+                  : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:bg-white'
               }`}
             >
-              <div className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${
-                isToday ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-700'
+              <span className={`text-xs md:text-sm font-bold w-fit ${
+                isToday 
+                  ? 'text-amber-800 bg-amber-200 px-2 py-0.5 rounded-md shadow-sm' 
+                  : 'text-slate-600 px-1'
               }`}>
-                {dayNumber}
-              </div>
+                {day}
+              </span>
               
-              {/* Event Container Placeholder */}
-              <div className="mt-1 flex flex-col gap-1 overflow-hidden h-[calc(100%-2rem)]">
-                {/* We will map over actual events here later */}
+              {/* Event rendering container (empty for now) */}
+              <div className="flex-1 mt-1 overflow-y-auto hide-scrollbar flex flex-col gap-1">
+                {/* Real events will be mapped here soon! */}
               </div>
             </div>
           );
