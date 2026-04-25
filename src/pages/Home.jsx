@@ -1,3 +1,4 @@
+import DailyContent from '../components/dashboard/DailyContent';
 import Leaderboard from '../components/dashboard/Leaderboard';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import ChoresPanel from '../components/chores/ChoresPanel';
@@ -22,6 +23,7 @@ export default function Home() {
 
         {/* Sidebar Section (Right) */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
+          <DailyContent />
           <Leaderboard />
           <ChoresPanel />
         </div>
