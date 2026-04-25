@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette, Database } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Lightbulb, Database } from 'lucide-react';
 import { writeBatch, doc, collection } from 'firebase/firestore';
+import { getDatabase, ref, get } from 'firebase/database';
 import { db } from '../../config/firebase';
-import FactsTab from './FactsTab';
+
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
+import FactsTab from './FactsTab';
 
 const ADMIN_PIN = "8486";
 
@@ -27,45 +29,58 @@ export default function AdminModal({ isOpen, onClose }) {
     }
   };
 
-  // The Temporary Migration Function
-  const handleMigrateFacts = async () => {
-    if (!confirm("This will push all facts from your local JSON into Firestore. Ready?")) return;
+  // Legacy Events Migration Function
+  const handleMigrateLegacyEvents = async () => {
+    if (!window.confirm("This will pull all your legacy events from the old Realtime Database and push them to the new Firestore database. Ready?")) return;
     
     setIsMigrating(true);
     try {
-      const batch = writeBatch(db);
-      const dailyRef = collection(db, 'dailyContent');
-
-      factsData.forEach((item) => {
-        if (item.startsWith('[')) {
-          // Extract the date like "01-01" from "[01-01] <b>🎆 Happy..."
-          const dateMatch = item.match(/\[(\d{2}-\d{2})\]/);
-          if (dateMatch) {
-            const dateId = dateMatch[1]; 
-            const text = item.replace(`[${dateId}]`, '').trim();
-            
-            // Set document ID explicitly to the date (e.g., "04-25")
-            const docRef = doc(dailyRef, dateId);
-            batch.set(docRef, { type: 'override', text, date: dateId });
-          }
-        } else {
-          // It's a standard random fact, let Firestore auto-generate the ID
-          const docRef = doc(dailyRef); 
-          batch.set(docRef, { type: 'fact', text: item });
-        }
-      });
-
-      await batch.commit();
-      alert("✅ Migration complete! 100+ facts and events are now in the cloud.");
+      // 1. Connect to your old Realtime Database
+      const rtdb = getDatabase();
+      const legacyRef = ref(rtdb, 'schellFamilyCalendar/events');
+      const snapshot = await get(legacyRef);
+      
+      if (snapshot.exists()) {
+        const legacyEvents = snapshot.val();
+        
+        // 2. Prepare the new Firestore batch write
+        const batch = writeBatch(db);
+        const eventsCollection = collection(db, 'calendarEvents');
+        
+        let count = 0;
+        legacyEvents.forEach(event => {
+          if (!event) return;
+          
+          // Use the existing ID if possible so we don't duplicate on multiple runs
+          const newDocRef = event.id ? doc(eventsCollection, String(event.id)) : doc(eventsCollection);
+          
+          batch.set(newDocRef, {
+            groupId: event.groupId || null,
+            title: event.title || 'Untitled',
+            date: event.date || '',
+            member: Array.isArray(event.member) ? event.member : (event.member ? [event.member] : []),
+            time: event.time || '',
+            endTime: event.endTime || '',
+            isMultiDay: event.isMultiDay || false,
+            startDate: event.startDate || '',
+            endDate: event.endDate || ''
+          });
+          count++;
+        });
+        
+        await batch.commit();
+        alert(`✅ Migration complete! ${count} legacy events have been successfully migrated to Firestore.`);
+      } else {
+        alert("No legacy events found in the old database.");
+      }
     } catch (error) {
       console.error("Migration failed:", error);
-      alert("Failed to migrate data. Check console.");
+      alert("Failed to migrate events. Check your browser console for details.");
     } finally {
       setIsMigrating(false);
     }
   };
 
-  // The PIN Entry Screen
   if (!isAuthenticated) {
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -75,6 +90,7 @@ export default function AdminModal({ isOpen, onClose }) {
           <form onSubmit={handlePinSubmit}>
             <input
               type="password"
+              autoComplete="new-password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               maxLength={4}
@@ -96,7 +112,6 @@ export default function AdminModal({ isOpen, onClose }) {
     );
   }
 
-  // The Main Admin Dashboard
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -119,7 +134,9 @@ export default function AdminModal({ isOpen, onClose }) {
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
-<TabButton active={activeTab === 'facts'} onClick={() => setActiveTab('facts')} icon={<Lightbulb className="w-5 h-5" />} label="Facts & Events" />          </div>
+            <TabButton active={activeTab === 'facts'} onClick={() => setActiveTab('facts')} icon={<Lightbulb className="w-5 h-5" />} label="Facts & Events" />
+            <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Database className="w-5 h-5" />} label="System Tools" />
+          </div>
 
           {/* Tab Content Panel */}
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
@@ -134,6 +151,26 @@ export default function AdminModal({ isOpen, onClose }) {
             )}
             
             {activeTab === 'facts' && <FactsTab />}
+
+            {activeTab === 'system' && (
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-slate-800">🔧 System Tools</h3>
+                
+                <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm mt-4">
+                  <h4 className="font-bold text-slate-800 mb-2">Migrate Legacy Calendar Events</h4>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Pull your old events from the Firebase Realtime Database and push them into the new Firestore system.
+                  </p>
+                  <button 
+                    onClick={handleMigrateLegacyEvents}
+                    disabled={isMigrating}
+                    className="py-2 px-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {isMigrating ? 'Migrating Events...' : 'Run Event Migration Script'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
