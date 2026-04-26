@@ -57,9 +57,14 @@ export default function ChoresPanel() {
         // 2. Find the kid and trigger the Mission Complete Modal!
         const member = members.find(m => m.id === chore.assignedTo);
         if (member) {
-          setCelebratingKid(member);
+          // FIX: Manually inject the final chore's points into the snapshot 
+          // so the modal is instantly mathematically accurate without waiting for the database
+          setCelebratingKid({
+            ...member,
+            points: Number(member.points || 0) + Number(chore.points || 0)
+          });
           
-          // Auto-dismiss after 15 seconds just in case they walk away
+          // Auto-dismiss after 15 seconds
           setTimeout(() => setCelebratingKid(null), 15000);
         }
       }
@@ -104,7 +109,6 @@ export default function ChoresPanel() {
           </div>
         </div>
         <div className="bg-amber-100 text-amber-700 px-2 py-1 rounded-lg text-sm font-bold shrink-0">
-          {/* Bulletproof chore points display */}
           {Number(chore.points) || 0}
         </div>
       </div>
@@ -215,7 +219,7 @@ export default function ChoresPanel() {
               All chores done for today! 🎉
             </div>
             
-            {/* Points Pill (BULLETPROOFED) */}
+            {/* Points Pill (Accurately Synced) */}
             <div 
               className="inline-block text-white px-8 py-3 rounded-full text-2xl font-black shadow-xl border-2 border-white/20"
               style={{ 
@@ -223,7 +227,7 @@ export default function ChoresPanel() {
                 boxShadow: `0 0 20px ${celebratingKid.color}88` 
               }}
             >
-              {Number(celebratingKid.points) || 0} ⭐ Total
+              {celebratingKid.points || 0} ⭐ Total
             </div>
             
             <div className="mt-8 text-sm text-slate-300 font-medium opacity-70 tracking-widest uppercase">
