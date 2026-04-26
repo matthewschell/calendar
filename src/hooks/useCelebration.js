@@ -4,10 +4,11 @@ import { db } from '../config/firebase';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_SETTINGS = {
-  style: 'fireworks', // fireworks, cannons, stars, rain
-  duration: 5,        // 3, 5, or 10 seconds
-  intensity: 100,     // particle count modifier
-  soundUrl: ''        // path to an mp3 in the public folder
+  cannons: true,       // The rapid-fire side confetti
+  fireworks: true,     // The giant legacy stars
+  rain: false,         // Falling from the sky
+  duration: 5,         // Seconds
+  soundUrl: 'https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Mario%20Bros%20Flagpole.mp3'
 };
 
 export function useCelebration() {
@@ -19,7 +20,9 @@ export function useCelebration() {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'systemSettings', 'celebrations'), (docSnap) => {
       if (docSnap.exists()) {
-        setSettings(docSnap.data());
+        setSettings({ ...DEFAULT_SETTINGS, ...docSnap.data() });
+      } else {
+        setSettings(DEFAULT_SETTINGS);
       }
       setLoading(false);
     });
@@ -31,46 +34,64 @@ export function useCelebration() {
   };
 
   const triggerCelebration = (overrideSettings = null) => {
-    const activeSettings = overrideSettings || settings;
-    const end = Date.now() + (activeSettings.duration * 1000);
+    const config = overrideSettings || settings;
+    const durationMs = config.duration * 1000;
+    const end = Date.now() + durationMs;
 
-    // 1. Play Sound (if configured)
-    if (activeSettings.soundUrl) {
+    // 1. Play Sound
+    if (config.soundUrl) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      audioRef.current = new Audio(activeSettings.soundUrl);
-      audioRef.current.volume = 0.5;
+      audioRef.current = new Audio(config.soundUrl);
+      audioRef.current.volume = 1.0;
       audioRef.current.play().catch(e => console.log("Audio play blocked by browser:", e));
     }
 
-    // 2. Fire the Confetti Engine based on chosen Style
-    const fire = () => {
-      if (Date.now() > end) return;
+    // 2. LAYER 1: The Legacy Side Cannons
+    if (config.cannons) {
+      const frame = () => {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, zIndex: 100002 });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, zIndex: 100002 });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      };
+      frame();
+    }
 
-      if (activeSettings.style === 'cannons') {
-        confetti({ particleCount: activeSettings.intensity / 20, angle: 60, spread: 55, origin: { x: 0, y: 0.8 }, zIndex: 9999 });
-        confetti({ particleCount: activeSettings.intensity / 20, angle: 120, spread: 55, origin: { x: 1, y: 0.8 }, zIndex: 9999 });
-        requestAnimationFrame(fire);
-      } 
-      else if (activeSettings.style === 'fireworks') {
-        const particleCount = activeSettings.intensity / 5;
-        confetti({ particleCount, startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999, origin: { x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.1 } });
-        setTimeout(fire, 250);
-      }
-      else if (activeSettings.style === 'stars') {
-        const defaults = { spread: 360, ticks: 50, gravity: 0, decay: 0.94, startVelocity: 30, shapes: ['star'], colors: ['FFE400', 'FFBD00', 'E89400', 'FFCA6C', 'FDFFB8'], zIndex: 9999 };
-        confetti({ ...defaults, particleCount: activeSettings.intensity / 5, origin: { x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.2 } });
-        setTimeout(fire, 200);
-      }
-      else if (activeSettings.style === 'rain') {
-        confetti({ particleCount: activeSettings.intensity / 10, origin: { y: 0, x: Math.random() }, zIndex: 9999, spread: 90, gravity: 0.8 });
-        requestAnimationFrame(fire);
-      }
-    };
+    // 3. LAYER 2: The Legacy Giant Star Fireworks
+    if (config.fireworks) {
+      const randomInRange = (min, max) => Math.random() * (max - min) + min;
+      const interval = setInterval(function() {
+        if (Date.now() > end) return clearInterval(interval);
+        
+        const particleCount = 6;
+        const colors = ['#FFD700','#FFA500','#FF4500','#FF69B4','#00BFFF','#7FFF00','#ffffff'];
+        
+        // Left burst
+        confetti({
+          particleCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
+          decay: 0.92, scalar: 2.5, shapes: ['star'], colors,
+          ticks: 200, gravity: 0.8, origin: { x: randomInRange(0.1, 0.4), y: 0.9 }, zIndex: 100002,
+        });
+        
+        // Right burst
+        confetti({
+          particleCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
+          decay: 0.92, scalar: 2.5, shapes: ['star'], colors,
+          ticks: 200, gravity: 0.8, origin: { x: randomInRange(0.6, 0.9), y: 0.9 }, zIndex: 100002,
+        });
+      }, 400);
+    }
 
-    fire();
+    // 4. LAYER 3: Confetti Rain
+    if (config.rain) {
+      const rainFrame = () => {
+        confetti({ particleCount: 2, origin: { y: 0, x: Math.random() }, zIndex: 100002, spread: 90, gravity: 0.8 });
+        if (Date.now() < end) requestAnimationFrame(rainFrame);
+      };
+      rainFrame();
+    }
   };
 
   return { settings, loading, saveSettings, triggerCelebration };
