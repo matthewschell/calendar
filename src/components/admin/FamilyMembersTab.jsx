@@ -61,7 +61,8 @@ export default function FamilyMembersTab() {
     color: '#3B82F6', 
     isKid: true, 
     signatureSound: 'mario-coin',
-    payRate: 0.10
+    payRate: 0.10,
+    previewAvatar: null
   });
 
   const playPreview = (soundId) => {
@@ -76,7 +77,6 @@ export default function FamilyMembersTab() {
     audioRef.current.play().catch(e => console.log("Audio play blocked or file missing:", e));
   };
 
-  // THE MISSING PIECE: Deletes ghost images from your Cloudflare Bucket
   const deleteImageFromCloudflare = async (imageUrl) => {
     if (!imageUrl || !imageUrl.includes('r2.dev')) return;
     try {
@@ -93,7 +93,6 @@ export default function FamilyMembersTab() {
     }
   };
 
-  // Image Compressor & Uploader
   const compressAndUploadImage = async (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -164,13 +163,17 @@ export default function FamilyMembersTab() {
       }
 
       await setDoc(doc(db, 'familyMembers', id), {
-        ...newMember,
+        name: newMember.name,
+        color: newMember.color,
+        isKid: newMember.isKid,
+        signatureSound: newMember.signatureSound,
+        payRate: newMember.payRate,
         avatar: avatarUrl,
         id,
         points: 0 
       });
       
-      setNewMember({ name: '', color: '#3B82F6', isKid: true, signatureSound: 'mario-coin', payRate: 0.10 });
+      setNewMember({ name: '', color: '#3B82F6', isKid: true, signatureSound: 'mario-coin', payRate: 0.10, previewAvatar: null });
       setNewAvatarFile(null);
       setIsAdding(false);
     } catch (error) {
@@ -185,7 +188,8 @@ export default function FamilyMembersTab() {
     setEditingId(member.id);
     setEditForm({ 
       ...member,
-      payRate: member.payRate !== undefined ? member.payRate : 0.10
+      payRate: member.payRate !== undefined ? member.payRate : 0.10,
+      previewAvatar: null
     });
     setEditAvatarFile(null);
   };
@@ -199,18 +203,15 @@ export default function FamilyMembersTab() {
   const handleSaveEdit = async () => {
     setIsUploading(true);
     try {
-      // Find the true original member from state to check their old avatar
       const originalMember = members.find(m => m.id === editingId);
       const originalAvatar = originalMember?.avatar;
 
       let finalAvatarUrl = editForm.avatar || '';
 
-      // If they uploaded a NEW file, delete the old one from Cloudflare and upload the new one
       if (editAvatarFile) {
         if (originalAvatar) await deleteImageFromCloudflare(originalAvatar);
         finalAvatarUrl = await compressAndUploadImage(editAvatarFile);
       } 
-      // If they didn't upload a new file, but hit "Remove Photo", delete the old one from Cloudflare
       else if (!editForm.avatar && originalAvatar) {
         await deleteImageFromCloudflare(originalAvatar);
       }
@@ -237,7 +238,6 @@ export default function FamilyMembersTab() {
 
   const handleDelete = async (id) => {
     if (confirm("Delete this family member? Their past history will remain safe.")) {
-      // Clean up their avatar from the bucket before deleting their document
       const memberToDelete = members.find(m => m.id === id);
       if (memberToDelete?.avatar) {
         await deleteImageFromCloudflare(memberToDelete.avatar);
@@ -267,67 +267,82 @@ export default function FamilyMembersTab() {
 
       {/* Add New Member Form */}
       {isAdding && (
-        <form onSubmit={handleAdd} className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <form onSubmit={handleAdd} className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-5 flex flex-col gap-5 animate-in fade-in slide-in-from-top-4 duration-300">
           <h4 className="font-bold text-indigo-900">Add New Member</h4>
+
+          {/* Avatar Preview & Upload Area */}
+          <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <div 
+              className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm border-2 border-white ring-2 ring-slate-100 shrink-0 overflow-hidden bg-cover bg-center" 
+              style={{ 
+                backgroundColor: newMember.color || '#cbd5e1',
+                backgroundImage: newMember.previewAvatar ? `url(${newMember.previewAvatar})` : 'none'
+              }}
+            >
+              {!newMember.previewAvatar && (newMember.name ? newMember.name.charAt(0).toUpperCase() : '?')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Profile Photo</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setNewAvatarFile(file);
+                    setNewMember({...newMember, previewAvatar: URL.createObjectURL(file)});
+                  }
+                }} 
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" 
+              />
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-1">Name</label>
-              <input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="e.g. Mason" required />
+              <input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors" placeholder="e.g. Mason" required />
             </div>
             
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-1">Type</label>
-              <select value={newMember.isKid} onChange={e => setNewMember({...newMember, isKid: e.target.value === 'true'})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+              <select value={newMember.isKid} onChange={e => setNewMember({...newMember, isKid: e.target.value === 'true'})} className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors bg-white">
                 <option value="true">Kid</option>
                 <option value="false">Adult</option>
               </select>
             </div>
             
-            <div className="min-w-0">
-              <label className="block text-sm font-bold text-slate-600 mb-1">Colour</label>
-              <div className="flex gap-3">
-                <input type="color" value={newMember.color} onChange={e => setNewMember({...newMember, color: e.target.value})} className="h-11 w-11 shrink-0 rounded-xl cursor-pointer border-0 p-0" />
-                <input type="text" value={newMember.color} onChange={e => setNewMember({...newMember, color: e.target.value})} className="flex-1 min-w-0 p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 uppercase transition-colors" />
-              </div>
-            </div>
-
             <div>
-              <label className="block text-sm font-bold text-slate-600 mb-1">Avatar Profile Photo</label>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={e => setNewAvatarFile(e.target.files[0])} 
-                className="w-full p-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
-              />
+              <label className="block text-sm font-bold text-slate-600 mb-1">Colour</label>
+              <input type="color" value={newMember.color} onChange={e => setNewMember({...newMember, color: e.target.value})} className="h-[42px] w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
             </div>
             
             {newMember.isKid && (
-              <>
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">Signature Sound</label>
-                  <div className="flex gap-4">
-                    <select value={newMember.signatureSound} onChange={e => setNewMember({...newMember, signatureSound: e.target.value})} className="flex-1 p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
-                      {SOUNDS.map(s => (
-                        <option key={s.id} value={s.id}>{s.label}</option>
-                      ))}
-                    </select>
-                    <button type="button" onClick={() => playPreview(newMember.signatureSound)} className="p-3 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-indigo-600 transition-colors" title="Preview Sound">
-                      <Play className="w-5 h-5 fill-current" />
-                    </button>
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">Pay Rate (Per Point)</label>
+                <div className="relative w-2/3">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-4 w-4 text-slate-400" />
                   </div>
+                  <input type="number" step="0.01" min="0" value={newMember.payRate} onChange={e => setNewMember({...newMember, payRate: parseFloat(e.target.value)})} className="w-full pl-9 p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors" />
                 </div>
+              </div>
+            )}
 
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">Pay Rate (Per Point)</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input type="number" step="0.01" min="0" value={newMember.payRate} onChange={e => setNewMember({...newMember, payRate: parseFloat(e.target.value)})} className="w-full pl-10 p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 transition-colors" />
-                  </div>
+            {newMember.isKid && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-600 mb-1">Signature Sound</label>
+                <div className="flex gap-4">
+                  <select value={newMember.signatureSound} onChange={e => setNewMember({...newMember, signatureSound: e.target.value})} className="w-full md:w-1/2 p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors bg-white">
+                    {SOUNDS.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => playPreview(newMember.signatureSound)} className="p-2.5 px-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-indigo-600 transition-colors shrink-0 flex items-center justify-center" title="Preview Sound">
+                    <Play className="w-5 h-5 fill-current" />
+                  </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
           
@@ -344,12 +359,52 @@ export default function FamilyMembersTab() {
             
             {/* INLINE EDIT MODE */}
             {editingId === member.id ? (
-              <div className="p-5 bg-amber-50/50 flex flex-col gap-4">
-                <div className="flex justify-between items-center mb-2">
+              <div className="p-5 bg-amber-50/50 flex flex-col gap-5">
+                <div className="flex justify-between items-center mb-1">
                   <h4 className="font-bold text-slate-800">Edit {member.name}</h4>
                   <button onClick={cancelEditing} disabled={isUploading} className="p-1 text-slate-400 hover:bg-slate-200 rounded-md">
                     <X className="w-5 h-5" />
                   </button>
+                </div>
+
+                {/* Avatar Preview Block */}
+                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <div 
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm border-2 border-white ring-2 ring-slate-100 shrink-0 overflow-hidden bg-cover bg-center" 
+                    style={{ 
+                      backgroundColor: editForm.color || '#cbd5e1',
+                      backgroundImage: (editForm.previewAvatar || editForm.avatar) ? `url(${editForm.previewAvatar || editForm.avatar})` : 'none'
+                    }}
+                  >
+                    {!(editForm.previewAvatar || editForm.avatar) && editForm.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Update Profile Photo</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if(file) {
+                          setEditAvatarFile(file);
+                          setEditForm({...editForm, previewAvatar: URL.createObjectURL(file)});
+                        }
+                      }} 
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" 
+                    />
+                    {(editForm.avatar || editForm.previewAvatar) && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setEditForm({ ...editForm, avatar: '', previewAvatar: null });
+                          setEditAvatarFile(null);
+                        }} 
+                        className="mt-1 text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        ✕ Remove Photo
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,6 +412,7 @@ export default function FamilyMembersTab() {
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Name</label>
                     <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700" />
                   </div>
+                  
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Type</label>
                     <select value={editForm.isKid} onChange={e => setEditForm({...editForm, isKid: e.target.value === 'true'})} className="w-full p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700 bg-white">
@@ -364,61 +420,38 @@ export default function FamilyMembersTab() {
                       <option value="false">Adult</option>
                     </select>
                   </div>
-                  <div className="min-w-0">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Colour</label>
-                    <div className="flex gap-2">
-                      <input type="color" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="h-10 w-10 shrink-0 rounded-lg cursor-pointer border-0 p-0" />
-                      <input type="text" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="flex-1 min-w-0 p-2.5 rounded-lg border border-slate-300 font-bold text-slate-700 uppercase" />
-                    </div>
-                  </div>
+                  
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Update Avatar Profile Photo</label>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={e => setEditAvatarFile(e.target.files[0])} 
-                      className="w-full p-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
-                    />
-                    {/* Allow removing the photo if one exists */}
-                    {(editForm.avatar || editAvatarFile) && (
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          setEditForm({ ...editForm, avatar: '' });
-                          setEditAvatarFile(null);
-                        }} 
-                        className="mt-2 text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        ✕ Remove Photo
-                      </button>
-                    )}
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Colour</label>
+                    <input type="color" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="h-[42px] w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
                   </div>
 
                   {editForm.isKid && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sound</label>
-                        <div className="flex gap-4">
-                          <select value={editForm.signatureSound || 'mario-coin'} onChange={e => setEditForm({...editForm, signatureSound: e.target.value})} className="flex-1 p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700 bg-white">
-                            {SOUNDS.map(s => (
-                              <option key={s.id} value={s.id}>{s.label}</option>
-                            ))}
-                          </select>
-                          <button type="button" onClick={() => playPreview(editForm.signatureSound || 'mario-coin')} className="p-2.5 px-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-indigo-600 transition-colors" title="Preview Sound">
-                            <Play className="w-5 h-5 fill-current" />
-                          </button>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pay Rate</label>
+                      <div className="relative w-2/3">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <DollarSign className="h-4 w-4 text-slate-400" />
                         </div>
+                        <input type="number" step="0.01" min="0" value={editForm.payRate} onChange={e => setEditForm({...editForm, payRate: parseFloat(e.target.value)})} className="w-full pl-9 p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700" />
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pay Rate</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <DollarSign className="h-4 w-4 text-slate-400" />
-                          </div>
-                          <input type="number" step="0.01" min="0" value={editForm.payRate} onChange={e => setEditForm({...editForm, payRate: parseFloat(e.target.value)})} className="w-full pl-9 p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700" />
-                        </div>
+                    </div>
+                  )}
+
+                  {editForm.isKid && (
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Signature Sound</label>
+                      <div className="flex gap-4">
+                        <select value={editForm.signatureSound || 'mario-coin'} onChange={e => setEditForm({...editForm, signatureSound: e.target.value})} className="w-full md:w-1/2 p-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 font-bold text-slate-700 bg-white">
+                          {SOUNDS.map(s => (
+                            <option key={s.id} value={s.id}>{s.label}</option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => playPreview(editForm.signatureSound || 'mario-coin')} className="p-2.5 px-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-indigo-600 transition-colors shrink-0 flex items-center justify-center" title="Preview Sound">
+                          <Play className="w-5 h-5 fill-current" />
+                        </button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
 
