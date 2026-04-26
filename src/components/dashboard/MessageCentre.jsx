@@ -20,15 +20,15 @@ export default function MessageCentre() {
   const activeTheme = themes[messageData.type] || themes.info;
 
   return (
-    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors`}>
-      <div className="flex items-center gap-3 mb-2">
+    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-32 flex flex-col`}>
+      <div className="flex items-center gap-3 mb-2 shrink-0">
         {activeTheme.icon}
         <h3 className={`font-bold ${activeTheme.text} text-lg`}>{messageData.title}</h3>
       </div>
       
       {/* Renders WYSIWYG HTML directly while enforcing tailwind styling for lists/links */}
       <div 
-        className={`${activeTheme.text} text-sm leading-relaxed [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-2`}
+        className={`${activeTheme.text} text-sm leading-relaxed flex-1 [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-2`}
         dangerouslySetInnerHTML={{ __html: messageData.content }} 
       />
     </div>

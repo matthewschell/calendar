@@ -1,4 +1,4 @@
-import { X, Calendar as CalendarIcon, Clock, Users } from 'lucide-react';
+import { X, Plus, Edit2, Trash2 } from 'lucide-react';
 
 export default function DayViewModal({ 
   isOpen, 
@@ -7,164 +7,147 @@ export default function DayViewModal({
   events, 
   members, 
   onAddEvent, 
-  onEditEvent,
+  onEditEvent, 
   onDeleteEvent,
   onDeleteEventGroup
 }) {
   if (!isOpen || !date) return null;
 
-  const getEventStripBackground = (event) => {
-    if (!event.member) return '#cbd5e1';
-    
-    const memberIds = Array.isArray(event.member) ? event.member : [event.member];
-    const isFamilyEvent = memberIds.includes('family');
-    const isMisc = memberIds.includes('misc');
-
-    if (isFamilyEvent) return 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)';
-    if (isMisc) return '#cbd5e1';
-
-    const colors = memberIds
-      .filter(id => id !== 'misc')
-      .map(id => members.find(m => m.id === id)?.color || '#cbd5e1');
-
-    if (colors.length === 1) return colors[0];
-    if (colors.length > 1) return `linear-gradient(180deg, ${colors.join(', ')})`;
-    
-    return '#cbd5e1';
-  };
-
-  const getMemberNames = (event) => {
-    if (!event.member) return '';
-    const memberIds = Array.isArray(event.member) ? event.member : [event.member];
-    if (memberIds.includes('family')) return 'Family';
-    if (memberIds.includes('misc')) return 'Misc';
-    
-    return memberIds
-      .map(id => members.find(m => m.id === id)?.name || '')
-      .filter(Boolean)
-      .join(', ');
-  };
-
-  const handleDelete = (event) => {
-    if (event.isMultiDay && event.groupId) {
-      onDeleteEventGroup(event.groupId, event.title);
-    } else {
-      onDeleteEvent(event.id, event.title);
-    }
-  };
+  const dateString = date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric' 
+  });
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+        className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header (Gradient) */}
-        <div className="bg-linear-to-br from-indigo-500 to-purple-600 p-5 md:p-6 text-white shrink-0">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="text-sm font-semibold opacity-80 uppercase tracking-wider mb-1">
-                {date.toLocaleDateString('default', { weekday: 'long' })}
-              </div>
-              <div className="text-3xl font-bold">
-                {date.toLocaleDateString('default', { month: 'long', day: 'numeric', year: 'numeric' })}
-              </div>
-              <div className="text-sm opacity-90 mt-1">
-                {events.length === 0 ? 'No events' : `${events.length} event${events.length !== 1 ? 's' : ''}`}
-              </div>
-            </div>
-            <button 
-              onClick={onClose}
-              className="bg-white/20 hover:bg-white/30 transition-colors border-none text-white w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">{dateString}</h2>
+            <p className="text-slate-500 font-medium text-sm">{events.length} Events Scheduled</p>
           </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         {/* Events List */}
-        <div className="overflow-y-auto p-4 md:p-6 flex-1 bg-slate-50">
+        <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-3 hide-scrollbar">
           {events.length === 0 ? (
-            <div className="text-center text-slate-400 py-10">
-              <div className="text-5xl mb-3">📭</div>
-              <div className="text-lg font-semibold text-slate-600">Nothing scheduled</div>
-              <div className="text-sm mt-1">Click below to add an event</div>
+            <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+              <p className="text-slate-500 font-medium">Nothing scheduled for today!</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {events.map(event => (
+            events.map(event => {
+              const isMisc = Array.isArray(event.member) && event.member.includes('misc');
+              let bgColor = '#cbd5e1'; // slate-300 default
+              
+              if (event.member?.includes('family')) {
+                bgColor = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+              } else if (isMisc) {
+                bgColor = '#f8fafc';
+              } else if (event.member?.length === 1) {
+                const member = members.find(m => m.id === event.member[0]);
+                if (member) bgColor = member.color;
+              } else if (event.member?.length > 1) {
+                const colors = event.member
+                  .filter(id => id !== 'family' && id !== 'misc')
+                  .map(id => members.find(m => m.id === id)?.color || '#cbd5e1');
+                if (colors.length > 0) bgColor = `linear-gradient(90deg, ${colors.join(', ')})`;
+              }
+
+              return (
                 <div 
                   key={event.id} 
-                  className="flex rounded-xl overflow-hidden bg-white border border-slate-200 shadow-xs hover:shadow-md transition-shadow"
+                  className={`p-4 rounded-2xl border-2 flex flex-col gap-2 transition-all hover:shadow-md ${isMisc ? 'border-slate-200' : 'border-transparent text-white'}`}
+                  style={{ background: bgColor, color: isMisc ? '#334155' : 'white' }}
                 >
-                  {/* Color Strip */}
-                  <div 
-                    className="w-2 shrink-0" 
-                    style={{ background: getEventStripBackground(event) }} 
-                  />
-                  
-                  {/* Content */}
-                  <div className="flex-1 p-4">
-                    <div className="flex justify-between items-start gap-3">
-                      <div className="flex-1">
-                        <div className="font-bold text-base text-slate-900 mb-2">{event.title}</div>
-                        
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {(event.time || event.endTime) && (
-                            <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
-                              <Clock className="w-3 h-3" />
-                              {event.time}{event.time && event.endTime ? ' – ' : ''}{event.endTime}
-                            </span>
-                          )}
-                          
-                          <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
-                            <Users className="w-3 h-3" />
-                            {getMemberNames(event)}
-                          </span>
-
-                          {event.isMultiDay && (
-                            <span className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                              <CalendarIcon className="w-3 h-3" />
-                              Multi-day
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons (Hide for Holidays) */}
-                      {!event.isHoliday && (
-                        <div className="flex gap-2 shrink-0">
-                          <button 
-                            onClick={() => onEditEvent(event)}
-                            className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-bold transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(event)}
-                            className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg text-sm font-bold transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <h4 className="font-bold text-lg leading-tight">{event.title}</h4>
+                      {event.time && (
+                        <span className="text-sm font-semibold opacity-90 flex items-center gap-1 mt-1">
+                          🕒 {event.time} {event.endTime ? `- ${event.endTime}` : ''}
+                        </span>
                       )}
                     </div>
+                    
+                    {/* Action Buttons (Hide for generated holidays) */}
+                    {!event.isHoliday && (
+                      <div className="flex gap-1 shrink-0 ml-4 bg-white/20 p-1 rounded-xl backdrop-blur-sm">
+                        <button 
+                          onClick={() => onEditEvent(event)} 
+                          className="p-1.5 hover:bg-white/30 rounded-lg transition-colors"
+                          title="Edit Event"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        
+                        {event.isMultiDay ? (
+                          <button 
+                            onClick={() => onDeleteEventGroup(event.groupId, event.title)} 
+                            className="p-1.5 hover:bg-red-500/80 rounded-lg transition-colors"
+                            title="Delete Entire Multi-Day Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => onDeleteEvent(event.id, event.title)} 
+                            className="p-1.5 hover:bg-red-500/80 rounded-lg transition-colors"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Render the Rich Text Description */}
+                  {event.description && event.description !== '<p><br></p>' && (
+                    <div 
+                      className={`mt-2 text-sm opacity-90 border-t pt-2 ${isMisc ? 'border-slate-200' : 'border-white/20'} [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4`}
+                      dangerouslySetInnerHTML={{ __html: event.description }}
+                    />
+                  )}
+                  
+                  {/* Assigned Members Bubbles */}
+                  {Array.isArray(event.member) && event.member.length > 0 && !event.member.includes('family') && !isMisc && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {event.member.map(memberId => {
+                        const m = members.find(x => x.id === memberId);
+                        if (!m) return null;
+                        return (
+                          <span key={memberId} className="text-[10px] uppercase tracking-wider font-bold bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                            {m.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 md:p-5 border-t border-slate-200 bg-white shrink-0">
-          <button
+        {/* Footer Add Button */}
+        <div className="pt-4 border-t border-slate-100 shrink-0">
+          <button 
             onClick={() => onAddEvent(date)}
-            className="w-full py-3.5 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl text-lg font-bold shadow-md transition-all hover:shadow-lg flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
           >
-            <CalendarIcon className="w-5 h-5" /> Add Event
+            <Plus className="w-5 h-5" /> Add New Event Here
           </button>
         </div>
+
       </div>
     </div>
   );

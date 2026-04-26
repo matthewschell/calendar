@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -18,7 +18,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Helper to format Date objects to YYYY-MM-DD for input fields
   const toISODate = (dateObj) => {
     if (!dateObj) return '';
     const d = new Date(dateObj);
@@ -28,7 +27,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
   useEffect(() => {
     if (isOpen) {
       if (existingEvent) {
-        // We are editing
         const rawStart = existingEvent.isMultiDay && existingEvent.startDate ? existingEvent.startDate : existingEvent.date;
         const rawEnd = existingEvent.isMultiDay && existingEvent.endDate ? existingEvent.endDate : '';
         
@@ -42,7 +40,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
           member: Array.isArray(existingEvent.member) ? existingEvent.member : [existingEvent.member]
         });
       } else {
-        // We are creating new
         setFormData({
           title: '',
           description: '',
@@ -79,7 +76,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
       const batch = writeBatch(db);
       const eventsRef = collection(db, 'calendarEvents');
 
-      // If editing, delete the old event(s) first
       if (existingEvent) {
         if (existingEvent.groupId) {
           const q = query(eventsRef, where('groupId', '==', existingEvent.groupId));
@@ -90,12 +86,11 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
         }
       }
 
-      // Generate the new events
       const groupId = existingEvent?.groupId || Date.now().toString();
       const iterDate = new Date(startDate);
       
       while (iterDate <= endDate) {
-        const newDocRef = doc(eventsRef); // Auto-generate ID
+        const newDocRef = doc(eventsRef);
         batch.set(newDocRef, {
           groupId,
           title: formData.title,
@@ -232,15 +227,15 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
           </div>
         </div>
 
-        {/* Description / WYSIWYG */}
+        {/* BULLETPROOF WYSIWYG EDITOR */}
         <div className="mb-6">
           <label className="block text-xs font-bold text-slate-500 mb-1">Event Description & Notes</label>
-          <div className="bg-white rounded-xl overflow-hidden border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
+          <div className="bg-white rounded-xl border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
             <ReactQuill 
               theme="snow" 
               value={formData.description || ''} 
               onChange={(content) => setFormData({ ...formData, description: content })}
-              className="h-32 border-none [&_.ql-container]:border-none [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b-2 [&_.ql-toolbar]:border-slate-100"
+              style={{ minHeight: '120px' }}
             />
           </div>
         </div>
@@ -249,7 +244,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
         <label className="block text-sm font-bold text-slate-700 mb-3">Assign To:</label>
         
         <div className="grid grid-cols-2 gap-3 mb-3">
-          {/* Family Toggle */}
           <button 
             onClick={() => handleMemberToggle('family')}
             className={`p-3 rounded-xl font-bold flex items-center gap-2 border-2 transition-all ${
@@ -261,7 +255,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
             {formData.member.includes('family') ? '☑' : '☐'} Family
           </button>
           
-          {/* Misc Toggle */}
           <button 
             onClick={() => handleMemberToggle('misc')}
             className={`p-3 rounded-xl font-bold flex items-center gap-2 border-2 transition-all ${
@@ -274,7 +267,6 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
           </button>
         </div>
 
-        {/* Individual Members Grid */}
         <div className="grid grid-cols-2 gap-3 mb-8">
           {members.map(m => {
             const isSelected = formData.member.includes(m.id);
@@ -285,8 +277,8 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
                 className="p-3 rounded-xl font-bold flex items-center gap-2 border-2 transition-all"
                 style={{
                   backgroundColor: isSelected ? m.color : 'white',
-                  borderColor: isSelected ? m.color : '#e2e8f0', // slate-200
-                  color: isSelected ? 'white' : '#475569' // slate-600
+                  borderColor: isSelected ? m.color : '#e2e8f0',
+                  color: isSelected ? 'white' : '#475569'
                 }}
               >
                 {isSelected ? '☑' : '☐'} {m.name}
