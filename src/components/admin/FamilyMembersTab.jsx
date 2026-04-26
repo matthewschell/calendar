@@ -314,7 +314,7 @@ export default function FamilyMembersTab() {
             
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-1">Colour</label>
-              <input type="color" value={newMember.color} onChange={e => setNewMember({...newMember, color: e.target.value})} className="h-[42px] w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
+              <input type="color" value={newMember.color} onChange={e => setNewMember({...newMember, color: e.target.value})} className="h-10.5 w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
             </div>
             
             {newMember.isKid && (
@@ -423,7 +423,7 @@ export default function FamilyMembersTab() {
                   
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Colour</label>
-                    <input type="color" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="h-[42px] w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
+                    <input type="color" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="h-10.5 w-full rounded-lg cursor-pointer border border-slate-300 p-0" />
                   </div>
 
                   {editForm.isKid && (
