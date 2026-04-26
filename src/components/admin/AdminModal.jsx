@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette, Lightbulb, Database } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Lightbulb, Database, MessageSquare } from 'lucide-react';
 import { writeBatch, doc, collection } from 'firebase/firestore';
 import { getDatabase, ref, get } from 'firebase/database';
 import { db } from '../../config/firebase';
@@ -8,6 +8,7 @@ import ThemeTab from './ThemeTab';
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
 import FactsTab from './FactsTab';
+import MessageTab from './MessageTab';
 
 const ADMIN_PIN = "8486";
 
@@ -134,6 +135,7 @@ export default function AdminModal({ isOpen, onClose }) {
           <div className="w-64 bg-slate-50 border-r border-slate-100 p-4 flex flex-col gap-2 shrink-0">
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
+            <TabButton active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="w-5 h-5" />} label="Message Centre" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
             <TabButton active={activeTab === 'facts'} onClick={() => setActiveTab('facts')} icon={<Lightbulb className="w-5 h-5" />} label="Facts & Events" />
             <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Database className="w-5 h-5" />} label="System Tools" />
@@ -143,9 +145,8 @@ export default function AdminModal({ isOpen, onClose }) {
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
             {activeTab === 'members' && <FamilyMembersTab />}
             {activeTab === 'chores' && <ChoresTab />}
-            
+            {activeTab === 'messages' && <MessageTab />}
             {activeTab === 'theme' && <ThemeTab />}
-            
             {activeTab === 'facts' && <FactsTab />}
 
             {activeTab === 'system' && (

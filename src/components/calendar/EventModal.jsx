@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { db } from '../../config/firebase';
 
 export default function EventModal({ isOpen, onClose, selectedDate, existingEvent, members }) {
   const [formData, setFormData] = useState({
     title: '',
+    description: '',
     date: '',
     endDate: '',
     time: '',
@@ -31,6 +34,7 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
         
         setFormData({
           title: existingEvent.title || '',
+          description: existingEvent.description || '',
           date: toISODate(rawStart),
           endDate: rawEnd ? toISODate(rawEnd) : '',
           time: existingEvent.time || '',
@@ -41,6 +45,7 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
         // We are creating new
         setFormData({
           title: '',
+          description: '',
           date: toISODate(selectedDate || new Date()),
           endDate: '',
           time: '',
@@ -94,6 +99,7 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
         batch.set(newDocRef, {
           groupId,
           title: formData.title,
+          description: formData.description || '',
           date: iterDate.toDateString(),
           member: formData.member,
           time: formData.time,
@@ -222,6 +228,19 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
               value={formData.endTime}
               onChange={e => setFormData({ ...formData, endTime: e.target.value })}
               className="w-full p-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Description / WYSIWYG */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-slate-500 mb-1">Event Description & Notes</label>
+          <div className="bg-white rounded-xl overflow-hidden border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
+            <ReactQuill 
+              theme="snow" 
+              value={formData.description || ''} 
+              onChange={(content) => setFormData({ ...formData, description: content })}
+              className="h-32 border-none [&_.ql-container]:border-none [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b-2 [&_.ql-toolbar]:border-slate-100"
             />
           </div>
         </div>
