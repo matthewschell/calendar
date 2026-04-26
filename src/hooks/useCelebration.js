@@ -38,7 +38,6 @@ export function useCelebration() {
     const durationMs = config.duration * 1000;
     const end = Date.now() + durationMs;
 
-    // 1. Play Sound
     if (config.soundUrl) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -49,7 +48,6 @@ export function useCelebration() {
       audioRef.current.play().catch(e => console.log("Audio play blocked by browser:", e));
     }
 
-    // 2. Loop through and execute every active layer
     const activeLayers = config.layers || [];
 
     activeLayers.forEach(layer => {
@@ -69,13 +67,11 @@ export function useCelebration() {
         const interval = setInterval(() => {
           if (Date.now() > end) return clearInterval(interval);
           const fireworkCount = Math.round(6 * layer.intensity);
-          // Left burst
           confetti({
             particleCount: fireworkCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
             decay: 0.92, scalar: layer.scale, shapes: ['star'], colors: layer.colors,
             ticks: 200, gravity: 0.8, origin: { x: randomInRange(0.1, 0.4), y: 0.9 }, zIndex: 100002,
           });
-          // Right burst
           confetti({
             particleCount: fireworkCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
             decay: 0.92, scalar: layer.scale, shapes: ['star'], colors: layer.colors,
@@ -86,30 +82,38 @@ export function useCelebration() {
 
       else if (layer.type === 'rain') {
         const frame = () => {
-          confetti({ particleCount: pCount, origin: { y: 0, x: Math.random() }, colors: layer.colors, scalar: layer.scale, zIndex: 100002, spread: 90, gravity: 0.8 });
+          // Angle 270 shoots it straight down instead of up!
+          confetti({ particleCount: pCount, angle: 270, startVelocity: 25, origin: { y: -0.1, x: Math.random() }, colors: layer.colors, scalar: layer.scale, zIndex: 100002, spread: 45, gravity: 1 });
           if (Date.now() < end) requestAnimationFrame(frame);
         };
         frame();
       }
 
       else if (layer.type === 'snow') {
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
         const frame = () => {
           confetti({ 
-            particleCount: pCount, origin: { y: 0, x: Math.random() }, colors: layer.colors, scalar: layer.scale, 
-            shapes: ['circle'], zIndex: 100002, spread: 90, gravity: 0.2, drift: Math.random() - 0.5, ticks: 300 
+            particleCount: pCount, 
+            startVelocity: 0, // Set to 0 so it doesn't fly upwards off the screen!
+            origin: { y: -0.1, x: Math.random() }, 
+            colors: layer.colors, 
+            scalar: layer.scale * randomInRange(0.6, 1.2), // Random sizes for realistic snowflakes
+            shapes: ['circle'], 
+            zIndex: 100002, 
+            gravity: randomInRange(0.2, 0.5), // Random weight so they fall at different speeds
+            drift: randomInRange(-0.6, 0.6), // Blow left and right in the wind
+            ticks: 300 
           });
           if (Date.now() < end) requestAnimationFrame(frame);
         };
         frame();
       }
 
-      // THE NEW REALISTIC BURST! Explodes hard, decays fast, then flutters down.
       else if (layer.type === 'realistic-burst') {
         const fireBurst = () => {
             const baseCount = Math.round(150 * layer.intensity);
             const burstParams = { origin: { y: 0.6, x: 0.5 }, colors: layer.colors, scalar: layer.scale, zIndex: 100002 };
             
-            // Layering multiple blasts with different speeds creates the 3D explosion effect
             confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.25), spread: 26, startVelocity: 55 });
             confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.2), spread: 60 });
             confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.35), spread: 100, decay: 0.91, scalar: layer.scale * 0.8 });
@@ -117,10 +121,7 @@ export function useCelebration() {
             confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.1), spread: 120, startVelocity: 45 });
         };
         
-        // Fire immediately
         fireBurst();
-        
-        // And keep firing every 1.5 seconds if the duration is long enough
         const interval = setInterval(() => {
           if (Date.now() > end) return clearInterval(interval);
           fireBurst();
