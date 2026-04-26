@@ -10,10 +10,10 @@ export default function ChoresPanel() {
   const { members, loading: membersLoading } = useFamilyMembers();
   const { completions, loading: compsLoading, toggleCompletion } = useDailyCompletions();
   
-  // Bring in the new Celebration Engine
   const { triggerCelebration } = useCelebration();
   
   const [claimingChore, setClaimingChore] = useState(null);
+  const [celebratingKid, setCelebratingKid] = useState(null);
 
   if (choresLoading || membersLoading || compsLoading) {
     return (
@@ -50,18 +50,29 @@ export default function ChoresPanel() {
       const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
       
       if (allDone && kidChores.length > 0) {
-        // Trigger the dynamic Mega Blast from the Admin settings!
+        // 1. Fire the custom Celebration Engine
         triggerCelebration();
+        
+        // 2. Find the kid and trigger the Mission Complete Modal!
+        const member = members.find(m => m.id === chore.assignedTo);
+        if (member) {
+          setCelebratingKid(member);
+          
+          // Auto-dismiss after 15 seconds just in case they walk away
+          setTimeout(() => setCelebratingKid(null), 15000);
+        }
       }
     }
   };
 
   const handleClaimBonus = (kidId) => {
     toggleCompletion(claimingChore, kidId, false);
-    
-    // Pass in an override for a smaller "Bonus" pop using the engine!
-    triggerCelebration({ style: 'stars', intensity: 50, duration: 2 });
-    
+    // Small pop for claiming a bonus
+    triggerCelebration({ 
+      layers: [{ type: 'fireworks', colors: ['#FFD700', '#FFA500'], scale: 1, intensity: 0.5 }],
+      duration: 2,
+      soundUrl: '' 
+    });
     setClaimingChore(null);
   };
 
@@ -99,12 +110,12 @@ export default function ChoresPanel() {
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative">
-      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative h-full flex flex-col">
+      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2 shrink-0">
         <span>📋</span> Today's Chores
       </h2>
       
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 overflow-y-auto pr-2 pb-4">
         {kids.map(kid => {
           const kidChores = assignedChores.filter(c => c.assignedTo === kid.id);
           if (kidChores.length === 0) return null;
@@ -159,6 +170,63 @@ export default function ChoresPanel() {
           >
             Cancel
           </button>
+        </div>
+      )}
+
+      {/* THE NEW MISSION COMPLETE MODAL */}
+      {celebratingKid && (
+        <div
+          onClick={() => setCelebratingKid(null)}
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-100001 flex-col gap-6 p-8 cursor-pointer transition-opacity"
+        >
+          <div className="text-center animate-bounce-in">
+            {/* Glowing Avatar */}
+            <div 
+              className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-2xl transition-transform hover:scale-110"
+              style={{ 
+                backgroundColor: celebratingKid.color || '#cbd5e1', 
+                boxShadow: `0 0 40px ${celebratingKid.color || '#cbd5e1'}` 
+              }}
+            >
+              {celebratingKid.avatar ? (
+                <img src={celebratingKid.avatar} className="w-full h-full object-cover" alt={celebratingKid.name} />
+              ) : (
+                <span className="text-5xl text-white font-bold">{celebratingKid.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            
+            {/* Mission Complete Text */}
+            <div className="text-2xl font-black text-amber-400 uppercase tracking-widest mb-2 drop-shadow-md">
+              Mission Complete!
+            </div>
+            
+            {/* Kid's Name with Glow */}
+            <div 
+              className="text-5xl font-black text-white mb-2 tracking-tight"
+              style={{ textShadow: `0 0 30px ${celebratingKid.color || '#cbd5e1'}` }}
+            >
+              {celebratingKid.name}
+            </div>
+            
+            <div className="text-xl text-emerald-200 mb-8 font-medium">
+              All chores done for today! 🎉
+            </div>
+            
+            {/* Points Pill */}
+            <div 
+              className="inline-block text-white px-8 py-3 rounded-full text-2xl font-black shadow-xl border-2 border-white/20"
+              style={{ 
+                backgroundColor: celebratingKid.color || '#64748b', 
+                boxShadow: `0 0 20px ${celebratingKid.color}88` 
+              }}
+            >
+              {celebratingKid.points || 0} ⭐ Total
+            </div>
+            
+            <div className="mt-8 text-sm text-slate-300 font-medium opacity-70 tracking-widest uppercase">
+              tap anywhere to dismiss
+            </div>
+          </div>
         </div>
       )}
     </div>
