@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
@@ -103,7 +104,8 @@ export default function ChoresPanel() {
           </div>
         </div>
         <div className="bg-amber-100 text-amber-700 px-2 py-1 rounded-lg text-sm font-bold shrink-0">
-          {chore.points}
+          {/* Bulletproof chore points display */}
+          {Number(chore.points) || 0}
         </div>
       </div>
     );
@@ -173,11 +175,12 @@ export default function ChoresPanel() {
         </div>
       )}
 
-      {/* THE NEW MISSION COMPLETE MODAL */}
-      {celebratingKid && (
+      {/* THE NEW MISSION COMPLETE MODAL (Teleported via Portal) */}
+      {celebratingKid && createPortal(
         <div
           onClick={() => setCelebratingKid(null)}
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-100001 flex-col gap-6 p-8 cursor-pointer transition-opacity"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center flex-col gap-6 p-8 cursor-pointer transition-opacity"
+          style={{ zIndex: 100001 }}
         >
           <div className="text-center animate-bounce-in">
             {/* Glowing Avatar */}
@@ -212,7 +215,7 @@ export default function ChoresPanel() {
               All chores done for today! 🎉
             </div>
             
-            {/* Points Pill */}
+            {/* Points Pill (BULLETPROOFED) */}
             <div 
               className="inline-block text-white px-8 py-3 rounded-full text-2xl font-black shadow-xl border-2 border-white/20"
               style={{ 
@@ -220,14 +223,15 @@ export default function ChoresPanel() {
                 boxShadow: `0 0 20px ${celebratingKid.color}88` 
               }}
             >
-              {celebratingKid.points || 0} ⭐ Total
+              {Number(celebratingKid.points) || 0} ⭐ Total
             </div>
             
             <div className="mt-8 text-sm text-slate-300 font-medium opacity-70 tracking-widest uppercase">
               tap anywhere to dismiss
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
