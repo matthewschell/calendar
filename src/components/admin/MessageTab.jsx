@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { MessageSquare, Save, Power } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
 
-export default function MessagesTab() {
+export default function MessageTab() {
   const { messageData, loading, saveMessage } = useMessageCentre();
   const [formData, setFormData] = useState(messageData);
   const [isSaving, setIsSaving] = useState(false);

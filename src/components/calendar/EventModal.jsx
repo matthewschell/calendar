@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { db } from '../../config/firebase';
 
 export default function EventModal({ isOpen, onClose, selectedDate, existingEvent, members }) {
