@@ -130,7 +130,8 @@ export default function CalendarGrid() {
           <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 md:gap-2 flex-1 auto-rows-fr min-h-0">
+        {/* TIGHTENED GRID GAP: gap-0.5 md:gap-1 */}
+        <div className="grid grid-cols-7 gap-0.5 md:gap-1 flex-1 auto-rows-fr min-h-0">
           {Array.from({ length: startingDayOfWeek }).map((_, i) => (
             <div key={`empty-${i}`} className="rounded-xl border-2 border-transparent bg-white/30"></div>
           ))}
@@ -167,8 +168,6 @@ export default function CalendarGrid() {
                       <div 
                         key={event.id} 
                         onClick={(e) => {
-                          // Prevent day click from firing when clicking an event badge
-                          // We open the Day View manually here to replicate legacy behavior
                           e.stopPropagation();
                           handleDayClick(dateObj);
                         }}

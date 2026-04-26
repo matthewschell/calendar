@@ -31,12 +31,23 @@ export function useDailyContent() {
         const dayOfYear = Math.floor(diff / oneDay);
 
         if (dayOfYear % 2 === 0) {
-          // EVEN DAY: Family-Friendly Dad Joke API
-          const jokeRes = await fetch('https://icanhazdadjoke.com/', {
-            headers: { Accept: 'application/json' }
-          });
-          const jokeData = await jokeRes.json();
-          setContent({ text: jokeData.joke, type: 'joke' });
+          // EVEN DAY: Family-Friendly Dad Joke API (Cached for the day)
+          const cachedDate = localStorage.getItem('daily_joke_date');
+          
+          if (cachedDate === dateId) {
+            setContent({ text: localStorage.getItem('daily_joke_text'), type: 'joke' });
+          } else {
+            const jokeRes = await fetch('https://icanhazdadjoke.com/', {
+              headers: { Accept: 'application/json' }
+            });
+            const jokeData = await jokeRes.json();
+            
+            // Save to browser storage so it doesn't change on refresh
+            localStorage.setItem('daily_joke_date', dateId);
+            localStorage.setItem('daily_joke_text', jokeData.joke);
+            
+            setContent({ text: jokeData.joke, type: 'joke' });
+          }
           
         } else {
           // ODD DAY: Custom Fact from Firestore
@@ -45,7 +56,11 @@ export function useDailyContent() {
           const querySnapshot = await getDocs(q);
           
           if (!querySnapshot.empty) {
-            const facts = querySnapshot.docs.map(d => d.data().text);
+            // Sort by ID to ensure absolute deterministic order
+            const facts = querySnapshot.docs
+              .sort((a, b) => a.id.localeCompare(b.id))
+              .map(d => d.data().text);
+              
             // Pick a consistent fact based on the day of the year
             const deterministicFact = facts[dayOfYear % facts.length];
             setContent({ text: deterministicFact, type: 'fact' });
