@@ -3,6 +3,7 @@ import { X, Settings, Users, ClipboardList, Palette, Lightbulb, Database } from 
 import { writeBatch, doc, collection } from 'firebase/firestore';
 import { getDatabase, ref, get } from 'firebase/database';
 import { db } from '../../config/firebase';
+import ThemeTab from './ThemeTab';
 
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
@@ -143,12 +144,7 @@ export default function AdminModal({ isOpen, onClose }) {
             {activeTab === 'members' && <FamilyMembersTab />}
             {activeTab === 'chores' && <ChoresTab />}
             
-            {activeTab === 'theme' && (
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-slate-800">🎨 Theme Customization</h3>
-                <p className="text-slate-500">Theme component goes here.</p>
-              </div>
-            )}
+            {activeTab === 'theme' && <ThemeTab />}
             
             {activeTab === 'facts' && <FactsTab />}
 

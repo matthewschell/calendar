@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 import { useDailyCompletions } from '../../hooks/useDailyCompletions';
+import { useCelebration } from '../../hooks/useCelebration';
 
 export default function ChoresPanel() {
   const { chores, loading: choresLoading } = useChores();
   const { members, loading: membersLoading } = useFamilyMembers();
   const { completions, loading: compsLoading, toggleCompletion } = useDailyCompletions();
   
-  // State for the "Who did this?" bonus chore modal
+  // Bring in the new Celebration Engine
+  const { triggerCelebration } = useCelebration();
+  
   const [claimingChore, setClaimingChore] = useState(null);
 
   if (choresLoading || membersLoading || compsLoading) {
@@ -28,14 +30,11 @@ export default function ChoresPanel() {
   const handleChoreClick = (chore) => {
     const isDone = completions[chore.id];
 
-    // If unassigned and not done, open the "Who did this?" modal
     if (!isDone && (chore.assignedTo === 'unassigned' || !chore.assignedTo)) {
       setClaimingChore(chore);
       return;
     }
 
-    // Determine whose score to update. (If it's a bonus chore being UNCHECKED, 
-    // we would ideally track who claimed it, but for simplicity today, we'll just block unchecking bonuses).
     if (isDone && chore.assignedTo === 'unassigned') {
       alert("Bonus chores cannot currently be unchecked. Admin feature coming soon.");
       return;
@@ -44,14 +43,25 @@ export default function ChoresPanel() {
     // Trigger atomic database update
     toggleCompletion(chore, chore.assignedTo, isDone);
 
-    if (!isDone) {
-      confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, zIndex: 9999 });
+    // If we are CHECKING a chore (it was not done)...
+    if (!isDone && chore.assignedTo) {
+      const kidChores = assignedChores.filter(c => c.assignedTo === chore.assignedTo);
+      // Check if every other chore for this kid is already in the 'completions' state
+      const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
+      
+      if (allDone && kidChores.length > 0) {
+        // Trigger the dynamic Mega Blast from the Admin settings!
+        triggerCelebration();
+      }
     }
   };
 
   const handleClaimBonus = (kidId) => {
     toggleCompletion(claimingChore, kidId, false);
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 }, zIndex: 9999 });
+    
+    // Pass in an override for a smaller "Bonus" pop using the engine!
+    triggerCelebration({ style: 'stars', intensity: 50, duration: 2 });
+    
     setClaimingChore(null);
   };
 
