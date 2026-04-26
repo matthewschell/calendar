@@ -28,20 +28,21 @@ export function useDailyCompletions() {
     
     const batch = writeBatch(db);
 
+    // FORCE the points to be a strict mathematical number before Firestore sees it
+    const numericPoints = Number(chore.points) || 0;
+
     if (isCurrentlyDone) {
       batch.delete(compRef);
-      // FIXED: changed "score" to "points" so it triggers the Leaderboard
-      batch.update(memberRef, { points: increment(-chore.points) });
+      batch.update(memberRef, { points: increment(-numericPoints) });
     } else {
       batch.set(compRef, {
         choreId: chore.id,
         date: todayStr,
         completedBy: memberId,
-        points: chore.points,
+        points: numericPoints,
         timestamp: new Date()
       });
-      // FIXED: changed "score" to "points"
-      batch.update(memberRef, { points: increment(chore.points) });
+      batch.update(memberRef, { points: increment(numericPoints) });
     }
 
     try {
