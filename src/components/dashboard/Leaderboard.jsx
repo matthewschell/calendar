@@ -1,41 +1,101 @@
 // src/components/dashboard/Leaderboard.jsx
 import { useState, useEffect } from 'react';
-import { Trophy, Medal, AlertCircle } from 'lucide-react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Trophy, Medal, AlertCircle, Clock } from 'lucide-react';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 
 export default function Leaderboard() {
   const { members, loading: membersLoading } = useFamilyMembers();
-  const [dailyScores, setDailyScores] = useState({});
+  const [scores, setScores] = useState({});
   const [scoresLoading, setScoresLoading] = useState(true);
+  
+  // Real-time Database Config State
+  const [widgetConfig, setWidgetConfig] = useState({
+    enabledTimeframes: ['daily', 'weekly', 'lifetime'],
+    defaultTimeframe: 'daily',
+    autoRevertSeconds: 60
+  });
+  
+  const [timeframe, setTimeframe] = useState('daily');
+  const [revertCountdown, setRevertCountdown] = useState(null);
 
-  // Fetch and calculate TODAY'S points directly from the completions collection
+  // 1. Listen for Live Admin Settings
   useEffect(() => {
-    const todayStr = new Date().toDateString();
-    const q = query(collection(db, 'completions'), where('date', '==', todayStr));
+    const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
+      if (docSnap.exists()) {
+        const newConfig = docSnap.data();
+        setWidgetConfig(newConfig);
+        
+        // If our current view was disabled by an admin, force jump to the new default
+        if (!newConfig.enabledTimeframes.includes(timeframe)) {
+          setTimeframe(newConfig.defaultTimeframe || 'daily');
+        }
+      }
+    });
+    return () => unsub();
+  }, [timeframe]);
+
+  // 2. Auto-Revert Logic
+  useEffect(() => {
+    if (timeframe !== widgetConfig.defaultTimeframe) {
+      setRevertCountdown(widgetConfig.autoRevertSeconds);
+      
+      const interval = setInterval(() => {
+        setRevertCountdown((prev) => {
+          if (prev <= 1) {
+            setTimeframe(widgetConfig.defaultTimeframe);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setRevertCountdown(null);
+    }
+  }, [timeframe, widgetConfig.defaultTimeframe, widgetConfig.autoRevertSeconds]);
+
+  // 3. Data Fetching Logic (Same as before)
+  useEffect(() => {
+    if (timeframe === 'lifetime') {
+      setScoresLoading(false);
+      return;
+    }
+
+    setScoresLoading(true);
+    const now = new Date();
+    let startDate = new Date();
     
+    if (timeframe === 'daily') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (timeframe === 'weekly') {
+      startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (timeframe === 'monthly') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    const q = query(collection(db, 'completions'), where('timestamp', '>=', startDate));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const scores = {};
+      const calculatedScores = {};
       snapshot.forEach(doc => {
         const data = doc.data();
         const kidId = data.completedBy;
         const points = Number(data.points) || 0;
-        
-        if (kidId) {
-          scores[kidId] = (scores[kidId] || 0) + points;
-        }
+        if (kidId) calculatedScores[kidId] = (calculatedScores[kidId] || 0) + points;
       });
-      setDailyScores(scores);
+      setScores(calculatedScores);
       setScoresLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [timeframe]);
 
-  if (membersLoading || scoresLoading) {
+  if (membersLoading) {
     return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-62.5 shrink-0">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-[400px] shrink-0">
         <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
         <div className="space-y-3">
           <div className="h-14 bg-slate-100 rounded-xl"></div>
@@ -46,27 +106,57 @@ export default function Leaderboard() {
     );
   }
 
-  // Map the dynamic daily points to the kids and sort them
   const kids = members
     .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
     .map(kid => ({
       ...kid,
-      todayPoints: dailyScores[kid.id] || 0
+      displayPoints: timeframe === 'lifetime' ? (Number(kid.points) || 0) : (scores[kid.id] || 0)
     }))
-    .sort((a, b) => b.todayPoints - a.todayPoints);
+    .sort((a, b) => b.displayPoints - a.displayPoints);
+
+  const isDefaultView = timeframe === widgetConfig.defaultTimeframe;
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-62.5 shrink-0">
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[400px] shrink-0 transition-all duration-500">
+      <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${isDefaultView ? 'bg-amber-400/20' : 'bg-slate-300/20'}`}></div>
       
-      {/* Decorative background glow */}
-      <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
-      
-      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2 relative z-10 shrink-0">
-        <Trophy className="text-amber-500 w-6 h-6" /> Live Daily Leaderboard
-      </h2>
+      <div className={`flex flex-col mb-4 relative z-10 shrink-0 transition-all duration-300 ${isDefaultView ? 'items-center text-center' : 'items-start'}`}>
+        <h2 className={`font-bold flex items-center gap-2 transition-all duration-300 ${isDefaultView ? 'text-2xl text-amber-600' : 'text-lg text-slate-600'}`}>
+          <Trophy className={`${isDefaultView ? 'text-amber-500 w-7 h-7' : 'text-slate-400 w-5 h-5'}`} /> 
+          {isDefaultView ? `Live ${timeframe} Leaderboard` : `${timeframe} Leaderboard`}
+        </h2>
+        
+        {!isDefaultView && revertCountdown !== null && (
+          <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 animate-pulse">
+            <Clock className="w-3 h-3" /> Reverting to {widgetConfig.defaultTimeframe} in {revertCountdown}s
+          </div>
+        )}
+      </div>
+
+      {widgetConfig.enabledTimeframes.length > 1 && (
+        <div className="flex p-1 bg-slate-100 rounded-xl mb-4 relative z-10 shrink-0 border border-slate-200 shadow-inner">
+          {widgetConfig.enabledTimeframes.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`flex-1 text-xs font-bold py-2 px-1 rounded-lg capitalize transition-all duration-200 ${
+                timeframe === t 
+                  ? 'bg-white text-amber-600 shadow-sm ring-1 ring-slate-200/50' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
       
       <div className="flex flex-col gap-3 relative z-10 flex-1">
-        {kids.length === 0 ? (
+        {scoresLoading ? (
+          <div className="flex-1 flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : kids.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
             <AlertCircle className="w-8 h-8 text-slate-400 mb-2" />
             <span className="text-sm font-bold text-slate-600">No kids found!</span>
@@ -76,8 +166,7 @@ export default function Leaderboard() {
             let MedalIcon = null;
             let medalColor = '';
             
-            // Only award medals if they actually have points today
-            if (kid.todayPoints > 0) {
+            if (kid.displayPoints > 0) {
               if (index === 0) { MedalIcon = Medal; medalColor = 'text-yellow-500'; }
               else if (index === 1) { MedalIcon = Medal; medalColor = 'text-slate-400'; }
               else if (index === 2) { MedalIcon = Medal; medalColor = 'text-amber-700'; }
@@ -89,12 +178,12 @@ export default function Leaderboard() {
             return (
               <div 
                 key={kid.id || index}
-                className="flex items-center justify-between p-3 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm"
+                className={`flex items-center justify-between rounded-xl border-2 transition-all duration-300 hover:scale-105 bg-white shadow-sm ${isDefaultView ? 'p-3.5' : 'p-2 opacity-90'}`}
                 style={{ borderColor: `${displayColor}40` }}
               >
                 <div className="flex items-center gap-3">
                   <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1 shrink-0"
+                    className={`rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1 shrink-0 transition-all ${isDefaultView ? 'w-11 h-11 text-base' : 'w-8 h-8 text-sm'}`}
                     style={{ backgroundColor: displayColor, '--tw-ring-color': displayColor }}
                   >
                     {kid.avatar ? (
@@ -103,21 +192,21 @@ export default function Leaderboard() {
                       displayName.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="font-bold text-slate-700 truncate">{displayName}</span>
+                  <span className={`font-bold text-slate-700 truncate ${isDefaultView ? 'text-base' : 'text-sm'}`}>
+                    {displayName}
+                  </span>
                 </div>
                 
-                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0">
-                  <span className="text-lg font-black text-slate-800">{kid.todayPoints}</span>
-                  {MedalIcon && <MedalIcon className={`w-5 h-5 drop-shadow-sm ${medalColor}`} />}
+                <div className={`flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0 transition-all ${isDefaultView ? 'scale-100' : 'scale-90'}`}>
+                  <span className={`font-black text-slate-800 ${isDefaultView ? 'text-xl' : 'text-lg'}`}>
+                    {kid.displayPoints}
+                  </span>
+                  {MedalIcon && <MedalIcon className={`drop-shadow-sm ${medalColor} ${isDefaultView ? 'w-6 h-6' : 'w-4 h-4'}`} />}
                 </div>
               </div>
             );
           })
         )}
-      </div>
-
-      <div className="mt-4 pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-mono text-center relative z-10 shrink-0">
-        DEBUG: {members.length} members | {kids.length} kids | Daily Scope
       </div>
     </div>
   );

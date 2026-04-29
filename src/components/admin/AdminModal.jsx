@@ -1,13 +1,13 @@
+// src/components/admin/AdminModal.jsx
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette, Lightbulb, Database, MessageSquare } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid } from 'lucide-react';
 import { writeBatch, doc, collection } from 'firebase/firestore';
 import { getDatabase, ref, get } from 'firebase/database';
 import { db } from '../../config/firebase';
 import ThemeTab from './ThemeTab';
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
-import FactsTab from './FactsTab';
-import MessageTab from './MessageTab';
+import WidgetsTab from './WidgetsTab'; // Import the new master tab!
 
 const ADMIN_PIN = "8486";
 
@@ -91,10 +91,9 @@ export default function AdminModal({ isOpen, onClose }) {
   }
 
   return (
-    // ID added here so ThemeTab can make it invisible on demand!
     <div id="admin-modal-container" className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-      <div className="bg-white rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
+      <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white shrink-0">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Settings className="text-indigo-600" /> Admin Panel</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"><X className="w-6 h-6" /></button>
         </div>
@@ -103,18 +102,16 @@ export default function AdminModal({ isOpen, onClose }) {
           <div className="w-64 bg-slate-50 border-r border-slate-100 p-4 flex flex-col gap-2 shrink-0">
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
-            <TabButton active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="w-5 h-5" />} label="Message Centre" />
+            <TabButton active={activeTab === 'widgets'} onClick={() => setActiveTab('widgets')} icon={<LayoutGrid className="w-5 h-5" />} label="Dashboard Widgets" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
-            <TabButton active={activeTab === 'facts'} onClick={() => setActiveTab('facts')} icon={<Lightbulb className="w-5 h-5" />} label="Facts & Events" />
             <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Database className="w-5 h-5" />} label="System Tools" />
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
             {activeTab === 'members' && <FamilyMembersTab />}
             {activeTab === 'chores' && <ChoresTab />}
-            {activeTab === 'messages' && <MessageTab />}
+            {activeTab === 'widgets' && <WidgetsTab />}
             {activeTab === 'theme' && <ThemeTab />}
-            {activeTab === 'facts' && <FactsTab />}
 
             {activeTab === 'system' && (
               <div>
