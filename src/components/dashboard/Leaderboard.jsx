@@ -10,9 +10,8 @@ export default function Leaderboard() {
   const [scores, setScores] = useState({});
   const [scoresLoading, setScoresLoading] = useState(true);
   
-  // Real-time Database Config State
   const [widgetConfig, setWidgetConfig] = useState({
-    enabledTimeframes: ['daily', 'weekly', 'lifetime'],
+    enabledTimeframes: ['daily', 'weekly', 'yearly', 'lifetime'],
     defaultTimeframe: 'daily',
     autoRevertSeconds: 60
   });
@@ -20,14 +19,11 @@ export default function Leaderboard() {
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
 
-  // 1. Listen for Live Admin Settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
       if (docSnap.exists()) {
         const newConfig = docSnap.data();
         setWidgetConfig(newConfig);
-        
-        // If our current view was disabled by an admin, force jump to the new default
         if (!newConfig.enabledTimeframes.includes(timeframe)) {
           setTimeframe(newConfig.defaultTimeframe || 'daily');
         }
@@ -36,11 +32,9 @@ export default function Leaderboard() {
     return () => unsub();
   }, [timeframe]);
 
-  // 2. Auto-Revert Logic
   useEffect(() => {
     if (timeframe !== widgetConfig.defaultTimeframe) {
       setRevertCountdown(widgetConfig.autoRevertSeconds);
-      
       const interval = setInterval(() => {
         setRevertCountdown((prev) => {
           if (prev <= 1) {
@@ -50,14 +44,12 @@ export default function Leaderboard() {
           return prev - 1;
         });
       }, 1000);
-      
       return () => clearInterval(interval);
     } else {
       setRevertCountdown(null);
     }
   }, [timeframe, widgetConfig.defaultTimeframe, widgetConfig.autoRevertSeconds]);
 
-  // 3. Data Fetching Logic (Same as before)
   useEffect(() => {
     if (timeframe === 'lifetime') {
       setScoresLoading(false);
@@ -75,6 +67,8 @@ export default function Leaderboard() {
       startDate.setHours(0, 0, 0, 0);
     } else if (timeframe === 'monthly') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (timeframe === 'yearly') {
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
 
     const q = query(collection(db, 'completions'), where('timestamp', '>=', startDate));
@@ -117,32 +111,37 @@ export default function Leaderboard() {
   const isDefaultView = timeframe === widgetConfig.defaultTimeframe;
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[400px] shrink-0 transition-all duration-500">
-      <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-500 ${isDefaultView ? 'bg-amber-400/20' : 'bg-slate-300/20'}`}></div>
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[400px] shrink-0">
+      <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
       
-      <div className={`flex flex-col mb-4 relative z-10 shrink-0 transition-all duration-300 ${isDefaultView ? 'items-center text-center' : 'items-start'}`}>
-        <h2 className={`font-bold flex items-center gap-2 transition-all duration-300 ${isDefaultView ? 'text-2xl text-amber-600' : 'text-lg text-slate-600'}`}>
-          <Trophy className={`${isDefaultView ? 'text-amber-500 w-7 h-7' : 'text-slate-400 w-5 h-5'}`} /> 
-          {isDefaultView ? `Live ${timeframe} Leaderboard` : `${timeframe} Leaderboard`}
+      <div className="flex flex-col mb-4 relative z-10 shrink-0 items-center text-center">
+        <h2 className="text-2xl font-bold text-amber-600 flex items-center gap-2 capitalize">
+          <Trophy className="text-amber-500 w-7 h-7" /> 
+          Live {timeframe} Leaderboard
         </h2>
         
-        {!isDefaultView && revertCountdown !== null && (
-          <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 animate-pulse">
-            <Clock className="w-3 h-3" /> Reverting to {widgetConfig.defaultTimeframe} in {revertCountdown}s
-          </div>
-        )}
+        {/* Reserved space container: h-6 ensures the DOM always holds this vertical space,
+          preventing the elements below from jumping when the timer mounts/unmounts.
+        */}
+        <div className="h-6 mt-1 flex items-center justify-center w-full">
+          {!isDefaultView && revertCountdown !== null && (
+            <div className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 animate-pulse">
+              <Clock className="w-3 h-3" /> Reverting to {widgetConfig.defaultTimeframe} in {revertCountdown}s
+            </div>
+          )}
+        </div>
       </div>
 
       {widgetConfig.enabledTimeframes.length > 1 && (
-        <div className="flex p-1 bg-slate-100 rounded-xl mb-4 relative z-10 shrink-0 border border-slate-200 shadow-inner">
+        <div className="flex p-1.5 bg-slate-100 rounded-xl mb-4 relative z-10 shrink-0 border border-slate-200 shadow-inner gap-1">
           {widgetConfig.enabledTimeframes.map((t) => (
             <button
               key={t}
               onClick={() => setTimeframe(t)}
-              className={`flex-1 text-xs font-bold py-2 px-1 rounded-lg capitalize transition-all duration-200 ${
+              className={`flex-1 text-xs font-bold py-2 px-1 rounded-lg capitalize transition-all duration-300 ${
                 timeframe === t 
-                  ? 'bg-white text-amber-600 shadow-sm ring-1 ring-slate-200/50' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                  ? 'bg-indigo-600 text-white shadow-md scale-105 transform z-10 ring-2 ring-indigo-300/50' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-100'
               }`}
             >
               {t}
@@ -178,12 +177,12 @@ export default function Leaderboard() {
             return (
               <div 
                 key={kid.id || index}
-                className={`flex items-center justify-between rounded-xl border-2 transition-all duration-300 hover:scale-105 bg-white shadow-sm ${isDefaultView ? 'p-3.5' : 'p-2 opacity-90'}`}
+                className="flex items-center justify-between p-3.5 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm"
                 style={{ borderColor: `${displayColor}40` }}
               >
                 <div className="flex items-center gap-3">
                   <div 
-                    className={`rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1 shrink-0 transition-all ${isDefaultView ? 'w-11 h-11 text-base' : 'w-8 h-8 text-sm'}`}
+                    className="w-11 h-11 text-base rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-offset-1 shrink-0"
                     style={{ backgroundColor: displayColor, '--tw-ring-color': displayColor }}
                   >
                     {kid.avatar ? (
@@ -192,16 +191,16 @@ export default function Leaderboard() {
                       displayName.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className={`font-bold text-slate-700 truncate ${isDefaultView ? 'text-base' : 'text-sm'}`}>
+                  <span className="font-bold text-slate-700 truncate text-base">
                     {displayName}
                   </span>
                 </div>
                 
-                <div className={`flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0 transition-all ${isDefaultView ? 'scale-100' : 'scale-90'}`}>
-                  <span className={`font-black text-slate-800 ${isDefaultView ? 'text-xl' : 'text-lg'}`}>
+                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0">
+                  <span className="font-black text-slate-800 text-xl">
                     {kid.displayPoints}
                   </span>
-                  {MedalIcon && <MedalIcon className={`drop-shadow-sm ${medalColor} ${isDefaultView ? 'w-6 h-6' : 'w-4 h-4'}`} />}
+                  {MedalIcon && <MedalIcon className={`drop-shadow-sm w-6 h-6 ${medalColor}`} />}
                 </div>
               </div>
             );
