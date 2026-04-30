@@ -1,6 +1,6 @@
 // src/components/dashboard/DailyContent.jsx
 import { useState, useEffect } from 'react';
-import { CloudSun, Lightbulb, Star, Smile } from 'lucide-react';
+import { CloudSun, Lightbulb, Star, Smile, ChevronDown } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useDailyContent } from '../../hooks/useDailyContent';
@@ -9,21 +9,21 @@ export default function DailyContent() {
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherConfig, setWeatherConfig] = useState(null);
+  const [isForecastExpanded, setIsForecastExpanded] = useState(false);
   
   const { content, loading: contentLoading } = useDailyContent();
 
-  // 1. Listen for real-time weather settings from Firestore
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'weather'), (docSnap) => {
       if (docSnap.exists()) {
         setWeatherConfig(docSnap.data());
       } else {
-        // Safe default if settings haven't been saved yet
         setWeatherConfig({
           city: 'Whitby, ON',
           lat: 43.8975,
           lon: -78.9429,
           units: 'celsius',
+          displayMode: 'daily',
           kidFriendly: true
         });
       }
@@ -31,7 +31,6 @@ export default function DailyContent() {
     return () => unsub();
   }, []);
 
-  // 2. Fetch from Open-Meteo dynamically based on settings
   useEffect(() => {
     if (!weatherConfig) return;
 
@@ -39,12 +38,17 @@ export default function DailyContent() {
       setWeatherLoading(true);
       try {
         const unitParam = weatherConfig.units === 'fahrenheit' ? '&temperature_unit=fahrenheit' : '';
-        // timezone=auto ensures the time matches whatever city was searched!
+        
+        // Always fetch the extended data so it's ready when they expand it
+        const modeParam = weatherConfig.displayMode === 'hourly' 
+          ? '&hourly=temperature_2m,weather_code&forecast_days=2' 
+          : `&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7`;
+
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${weatherConfig.lat}&longitude=${weatherConfig.lon}&current=temperature_2m,weather_code${unitParam}&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${weatherConfig.lat}&longitude=${weatherConfig.lon}&current=temperature_2m,weather_code${unitParam}${modeParam}&timezone=auto`
         );
         const weatherData = await weatherRes.json();
-        setWeather(weatherData.current);
+        setWeather(weatherData);
       } catch (error) {
         console.error("Failed to fetch weather data:", error);
       } finally {
@@ -55,6 +59,7 @@ export default function DailyContent() {
   }, [weatherConfig]);
 
   const getWeatherEmoji = (code) => {
+    if (code === undefined || code === null) return '☁️';
     if (code === 0) return '☀️'; 
     if (code > 0 && code < 4) return '⛅'; 
     if (code >= 45 && code <= 48) return '🌫️'; 
@@ -65,21 +70,18 @@ export default function DailyContent() {
     return '☁️';
   };
 
-  // Smart logic for Kid-Friendly Advice
   const getKidFriendlyAdvice = (code, temp) => {
-    if (!weatherConfig?.kidFriendly) return null;
+    if (!weatherConfig?.kidFriendly || code === undefined || temp === undefined) return null;
     
     let advice = [];
     const isFahrenheit = weatherConfig.units === 'fahrenheit';
     
-    // Check for precipitation first
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 99)) {
       advice.push('☂️ Grab an umbrella!');
     } else if (code >= 71 && code <= 77) {
       advice.push('🧤 Wear your mittens!');
     }
 
-    // Check temperatures
     const coldThreshold = isFahrenheit ? 50 : 10;
     const hotThreshold = isFahrenheit ? 77 : 25;
 
@@ -89,8 +91,17 @@ export default function DailyContent() {
       advice.push('🕶️ Don\'t forget sunscreen!');
     }
 
-    // Just return the most important piece of advice
     return advice.length > 0 ? advice[0] : null;
+  };
+
+  const formatDay = (isoString) => {
+    const d = new Date(`${isoString}T12:00:00`); 
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+  };
+
+  const formatHour = (isoString) => {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }).replace(' ', '').toLowerCase();
   };
 
   if (weatherLoading || contentLoading || !weatherConfig) {
@@ -109,35 +120,87 @@ export default function DailyContent() {
     config = { icon: <Smile className="w-4 h-4" />, title: 'Joke of the Day', border: 'border-emerald-400', text: 'text-emerald-500' };
   }
 
-  const currentTemp = Math.round(weather?.temperature_2m || 0);
+  const currentTemp = Math.round(weather?.current?.temperature_2m || 0);
   const tempUnit = weatherConfig.units === 'fahrenheit' ? '°F' : '°C';
-  const advice = weather ? getKidFriendlyAdvice(weather.weather_code, currentTemp) : null;
+  const advice = weather ? getKidFriendlyAdvice(weather?.current?.weather_code, currentTemp) : null;
+
+  let forecastData = [];
+  if (weatherConfig.displayMode === 'hourly' && weather?.hourly) {
+    const nowTime = new Date().getTime();
+    const startIndex = weather.hourly.time.findIndex(t => new Date(t).getTime() > nowTime - 3600000);
+    const start = startIndex > -1 ? startIndex : 0;
+    forecastData = weather.hourly.time.slice(start, start + 6).map((time, i) => ({
+      label: i === 0 ? 'Now' : formatHour(time),
+      temp: Math.round(weather.hourly.temperature_2m[start + i]),
+      code: weather.hourly.weather_code[start + i]
+    }));
+  } else if (weatherConfig.displayMode === 'daily' && weather?.daily) {
+    forecastData = weather.daily.time.slice(1, 7).map((time, i) => ({
+      label: formatDay(time),
+      temp: Math.round(weather.daily.temperature_2m_max[i + 1]),
+      code: weather.daily.weather_code[i + 1]
+    }));
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-linear-to-br from-sky-400 to-blue-500 rounded-2xl p-5 shadow-lg text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden">
+        
+        {/* Top Header Row with Expand Toggle */}
+        <div className="relative z-10 flex items-center justify-between mb-1">
+          <h3 className="text-sky-100 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+            <CloudSun className="w-4 h-4" /> Local Weather
+          </h3>
+          {forecastData.length > 0 && (
+            <button 
+              onClick={() => setIsForecastExpanded(!isForecastExpanded)}
+              className="text-sky-100 hover:text-white transition-colors focus:outline-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+            >
+              {weatherConfig.displayMode === 'hourly' ? 'Hours' : '6-Day'}
+              <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isForecastExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+        </div>
+
+        {/* Main Weather Data */}
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <h3 className="text-sky-100 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
-              <CloudSun className="w-4 h-4" /> Local Weather
-            </h3>
-            <div className="text-3xl font-bold flex items-start gap-1">
+            <div className="text-4xl font-bold flex items-start gap-1 tracking-tighter">
               {currentTemp}
-              <span className="text-lg text-sky-100 mt-1">{tempUnit}</span>
+              <span className="text-lg text-sky-100 mt-1 font-semibold tracking-normal">{tempUnit}</span>
             </div>
-            <div className="text-sky-100 text-sm mt-1">{weatherConfig.city}</div>
-            
-            {/* Kid Friendly Output Row */}
-            {advice && (
-              <div className="mt-2 text-xs font-bold bg-white/20 px-2 py-1 rounded-lg backdrop-blur-sm inline-block">
-                {advice}
-              </div>
-            )}
-            
           </div>
-          <div className="text-6xl drop-shadow-md">{getWeatherEmoji(weather?.weather_code)}</div>
+          <div className="text-5xl drop-shadow-md">
+            {getWeatherEmoji(weather?.current?.weather_code)}
+          </div>
         </div>
-        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+
+        {/* Bottom Inline Info (City | Advice) */}
+        <div className="relative z-10 flex items-center gap-2 mt-1 text-sm">
+          <span className="text-sky-100 font-medium truncate">{weatherConfig.city}</span>
+          {advice && (
+            <>
+              <div className="w-px h-3.5 bg-white/40 shrink-0"></div>
+              <span className="text-white font-bold whitespace-nowrap">{advice}</span>
+            </>
+          )}
+        </div>
+
+        {/* Expandable Forecast Section */}
+        {isForecastExpanded && forecastData.length > 0 && (
+          <div className="relative z-10 mt-4 pt-4 border-t border-white/20 flex justify-between animate-in fade-in slide-in-from-top-2 duration-300">
+            {forecastData.map((data, idx) => (
+              <div key={idx} className="flex flex-col items-center text-center">
+                <span className="text-[10px] text-sky-100 font-bold uppercase tracking-wider">{data.label}</span>
+                <span className="text-2xl my-1 drop-shadow-sm">{getWeatherEmoji(data.code)}</span>
+                <span className="text-sm font-bold text-white">{data.temp}°</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Decorative Background Glow */}
+        <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
       <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${config.border}`}>

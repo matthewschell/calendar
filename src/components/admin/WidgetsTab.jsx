@@ -117,13 +117,11 @@ function WeatherSettings() {
     lon: -78.9429,
     units: 'celsius',
     displayMode: 'daily',
-    forecastDays: 3,
     kidFriendly: true
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Geocoding Search State
   const [citySearch, setCitySearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -144,8 +142,11 @@ function WeatherSettings() {
     e.preventDefault();
     if (!citySearch.trim()) return;
     setIsSearching(true);
+    
+    const cleanSearchTerm = citySearch.split(',')[0].trim();
+    
     try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`);
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanSearchTerm)}&count=10&language=en&format=json`);
       const data = await res.json();
       setSearchResults(data.results || []);
     } catch (err) {
@@ -188,7 +189,7 @@ function WeatherSettings() {
       
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         
-        {/* User-Friendly Location Search */}
+        {/* Location Block */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
           <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-slate-400" /> Set Location
@@ -197,7 +198,7 @@ function WeatherSettings() {
           <form onSubmit={handleSearchCity} className="flex gap-2 mb-4 relative">
             <input 
               type="text" 
-              placeholder="Search for a city..."
+              placeholder="Search for a city (e.g. Whitby)..."
               value={citySearch}
               onChange={(e) => setCitySearch(e.target.value)}
               className="flex-1 p-3 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-indigo-500"
@@ -206,9 +207,8 @@ function WeatherSettings() {
               <Search className="w-4 h-4" /> {isSearching ? '...' : 'Search'}
             </button>
             
-            {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-20">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-20 max-h-64 overflow-y-auto">
                 {searchResults.map((result) => (
                   <div 
                     key={result.id} 
@@ -223,7 +223,6 @@ function WeatherSettings() {
             )}
           </form>
 
-          {/* Current Active Location Display */}
           <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 flex justify-between items-center">
             <div>
               <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Current Widget Location</div>
@@ -245,8 +244,8 @@ function WeatherSettings() {
               onChange={(e) => setConfig({...config, displayMode: e.target.value})}
               className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
             >
-              <option value="daily">Daily Forecast</option>
-              <option value="hourly">Today's Hourly</option>
+              <option value="daily">7-Day Forecast</option>
+              <option value="hourly">Hourly Forecast</option>
             </select>
           </div>
 
@@ -263,13 +262,13 @@ function WeatherSettings() {
           </div>
         </div>
 
-        {/* Kid Friendly Toggle */}
+        {/* Kid Friendly Toggle - FIXED TAILWIND BRACKETS */}
         <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
           <div>
             <h4 className="font-bold text-amber-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" /> Kid-Friendly Smart Advice
             </h4>
-            <p className="text-xs text-amber-700 mt-1">Shows helpful hints (like 🧥 for cold, ☂️ for rain) right on the widget.</p>
+            <p className="text-xs text-amber-700 mt-1">Shows bold, helpful hints (like 🧥 for cold, ☂️ for rain) right on the widget.</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input 
@@ -278,7 +277,7 @@ function WeatherSettings() {
               onChange={(e) => setConfig({...config, kidFriendly: e.target.checked})}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
           </label>
         </div>
 
