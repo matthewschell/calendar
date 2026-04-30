@@ -73,25 +73,24 @@ export default function DailyContent() {
   const getKidFriendlyAdvice = (code, temp) => {
     if (!weatherConfig?.kidFriendly || code === undefined || temp === undefined) return null;
     
-    let advice = [];
     const isFahrenheit = weatherConfig.units === 'fahrenheit';
     
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 99)) {
-      advice.push('☂️ Grab an umbrella!');
+      return { emoji: '☂️', text: 'Grab an umbrella!' };
     } else if (code >= 71 && code <= 77) {
-      advice.push('🧤 Wear your mittens!');
+      return { emoji: '🧤', text: 'Wear your mittens!' };
     }
 
     const coldThreshold = isFahrenheit ? 50 : 10;
     const hotThreshold = isFahrenheit ? 77 : 25;
 
     if (temp <= coldThreshold) {
-      advice.push('🧥 You need a jacket!');
-    } else if (temp >= hotThreshold && !advice.includes('☂️ Grab an umbrella!')) {
-      advice.push('🕶️ Don\'t forget sunscreen!');
+      return { emoji: '🧥', text: 'You need a jacket!' };
+    } else if (temp >= hotThreshold) {
+      return { emoji: '🕶️', text: "Don't forget sunscreen!" };
     }
 
-    return advice.length > 0 ? advice[0] : null;
+    return null;
   };
 
   const formatDay = (isoString) => {
@@ -164,28 +163,41 @@ export default function DailyContent() {
         </div>
 
         {/* Ultra-Compact Main Weather Row */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="text-4xl drop-shadow-md shrink-0">
-            {getWeatherEmoji(weather?.current?.weather_code)}
-          </div>
+        <div className="relative z-10 flex items-center justify-between w-full">
           
-          <div className="flex flex-col justify-center shrink-0">
-            <div className="text-2xl font-bold flex items-start tracking-tighter leading-none">
-              {currentTemp}
-              <span className="text-sm text-sky-100 font-semibold tracking-normal mt-0.5">{tempUnit}</span>
+          {/* Temperature Side (Icon included here ONLY if advice is active) */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-col justify-center">
+              <div className="text-5xl font-bold flex items-start tracking-tighter leading-none">
+                {currentTemp}
+                <span className="text-xl text-sky-100 font-semibold tracking-normal mt-1 ml-0.5">{tempUnit}</span>
+              </div>
+              <div className="text-sky-100 text-[10px] md:text-xs uppercase tracking-wider mt-1.5 font-medium truncate max-w-[100px] md:max-w-[120px]">
+                {weatherConfig.city}
+              </div>
             </div>
-            <div className="text-sky-100 text-[10px] uppercase tracking-wider mt-1 font-medium truncate max-w-22.5">
-              {weatherConfig.city}
-            </div>
+            
+            {advice && (
+              <div className="text-6xl drop-shadow-md leading-none ml-1">
+                {getWeatherEmoji(weather?.current?.weather_code)}
+              </div>
+            )}
           </div>
 
-          {advice && (
-            <>
-              <div className="w-px h-8 bg-white/30 shrink-0 mx-1"></div>
-              <div className="flex-1 text-xs font-bold leading-tight flex items-center">
-                {advice}
+          {/* Right Side: Advice (if active) OR Right-aligned Icon (if disabled) */}
+          {advice ? (
+            <div className="flex items-center flex-1 justify-center sm:justify-start border-l border-white/30 pl-3 sm:pl-5 ml-2 sm:ml-4 h-14">
+              <div className="text-5xl md:text-6xl drop-shadow-md leading-none shrink-0 mr-2 sm:mr-3">
+                {advice.emoji}
               </div>
-            </>
+              <div className="text-white font-bold text-sm sm:text-base md:text-lg leading-tight text-left">
+                {advice.text}
+              </div>
+            </div>
+          ) : (
+            <div className="text-6xl drop-shadow-md leading-none shrink-0">
+              {getWeatherEmoji(weather?.current?.weather_code)}
+            </div>
           )}
         </div>
 
