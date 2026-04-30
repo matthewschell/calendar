@@ -39,7 +39,7 @@ export default function DailyContent() {
       try {
         const unitParam = weatherConfig.units === 'fahrenheit' ? '&temperature_unit=fahrenheit' : '';
         
-        // Always fetch the extended data so it's ready when expanded
+        // Always fetch the extended data so it's ready when they expand it
         const modeParam = weatherConfig.displayMode === 'hourly' 
           ? '&hourly=temperature_2m,weather_code&forecast_days=2' 
           : `&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7`;
@@ -135,6 +135,7 @@ export default function DailyContent() {
       code: weather.hourly.weather_code[start + i]
     }));
   } else if (weatherConfig.displayMode === 'daily' && weather?.daily) {
+    // Skip today (index 0) and show the next 6 days
     forecastData = weather.daily.time.slice(1, 7).map((time, i) => ({
       label: formatDay(time),
       temp: Math.round(weather.daily.temperature_2m_max[i + 1]),
@@ -173,7 +174,7 @@ export default function DailyContent() {
               {currentTemp}
               <span className="text-sm text-sky-100 font-semibold tracking-normal mt-0.5">{tempUnit}</span>
             </div>
-            <div className="text-sky-100 text-[10px] uppercase tracking-wider mt-1 font-medium truncate max-w-[90px]">
+            <div className="text-sky-100 text-[10px] uppercase tracking-wider mt-1 font-medium truncate max-w-22.5">
               {weatherConfig.city}
             </div>
           </div>

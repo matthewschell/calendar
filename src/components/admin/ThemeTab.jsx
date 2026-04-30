@@ -252,7 +252,7 @@ export default function ThemeTab() {
 
           {/* Typography */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Type className="w-4 h-4"/> Global Font Style</label>
+            <label className="flex text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 items-center gap-1"><Type className="w-4 h-4"/> Global Font Style</label>
             <div className="grid grid-cols-2 gap-2">
               {FONT_OPTIONS.map(f => (
                 <button 
