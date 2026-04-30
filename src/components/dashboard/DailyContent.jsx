@@ -39,7 +39,7 @@ export default function DailyContent() {
       try {
         const unitParam = weatherConfig.units === 'fahrenheit' ? '&temperature_unit=fahrenheit' : '';
         
-        // Always fetch the extended data so it's ready when they expand it
+        // Always fetch the extended data so it's ready when expanded
         const modeParam = weatherConfig.displayMode === 'hourly' 
           ? '&hourly=temperature_2m,weather_code&forecast_days=2' 
           : `&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7`;
@@ -106,7 +106,7 @@ export default function DailyContent() {
 
   if (weatherLoading || contentLoading || !weatherConfig) {
     return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex gap-4 min-h-32 animate-pulse">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex gap-4 min-h-24 animate-pulse">
         <div className="flex-1 bg-slate-100 rounded-xl"></div>
         <div className="flex-1 bg-slate-100 rounded-xl"></div>
       </div>
@@ -144,17 +144,17 @@ export default function DailyContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden">
+      <div className="bg-linear-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col">
         
         {/* Top Header Row with Expand Toggle */}
-        <div className="relative z-10 flex items-center justify-between mb-1">
+        <div className="relative z-10 flex items-center justify-between mb-3">
           <h3 className="text-sky-100 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
             <CloudSun className="w-4 h-4" /> Local Weather
           </h3>
           {forecastData.length > 0 && (
             <button 
               onClick={() => setIsForecastExpanded(!isForecastExpanded)}
-              className="text-sky-100 hover:text-white transition-colors focus:outline-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+              className="text-sky-100 hover:text-white transition-colors focus:outline-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded-md"
             >
               {weatherConfig.displayMode === 'hourly' ? 'Hours' : '6-Day'}
               <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isForecastExpanded ? 'rotate-180' : ''}`} />
@@ -162,26 +162,28 @@ export default function DailyContent() {
           )}
         </div>
 
-        {/* Main Weather Data */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <div className="text-4xl font-bold flex items-start gap-1 tracking-tighter">
-              {currentTemp}
-              <span className="text-lg text-sky-100 mt-1 font-semibold tracking-normal">{tempUnit}</span>
-            </div>
-          </div>
-          <div className="text-5xl drop-shadow-md">
+        {/* Ultra-Compact Main Weather Row */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="text-4xl drop-shadow-md shrink-0">
             {getWeatherEmoji(weather?.current?.weather_code)}
           </div>
-        </div>
+          
+          <div className="flex flex-col justify-center shrink-0">
+            <div className="text-2xl font-bold flex items-start tracking-tighter leading-none">
+              {currentTemp}
+              <span className="text-sm text-sky-100 font-semibold tracking-normal mt-0.5">{tempUnit}</span>
+            </div>
+            <div className="text-sky-100 text-[10px] uppercase tracking-wider mt-1 font-medium truncate max-w-[90px]">
+              {weatherConfig.city}
+            </div>
+          </div>
 
-        {/* Bottom Inline Info (City | Advice) */}
-        <div className="relative z-10 flex items-center gap-2 mt-1 text-sm">
-          <span className="text-sky-100 font-medium truncate">{weatherConfig.city}</span>
           {advice && (
             <>
-              <div className="w-px h-3.5 bg-white/40 shrink-0"></div>
-              <span className="text-white font-bold whitespace-nowrap">{advice}</span>
+              <div className="w-px h-8 bg-white/30 shrink-0 mx-1"></div>
+              <div className="flex-1 text-xs font-bold leading-tight flex items-center">
+                {advice}
+              </div>
             </>
           )}
         </div>

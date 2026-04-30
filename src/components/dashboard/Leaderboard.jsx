@@ -89,7 +89,7 @@ export default function Leaderboard() {
 
   if (membersLoading) {
     return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-[400px] shrink-0">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-100 shrink-0">
         <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
         <div className="space-y-3">
           <div className="h-14 bg-slate-100 rounded-xl"></div>
@@ -111,7 +111,7 @@ export default function Leaderboard() {
   const isDefaultView = timeframe === widgetConfig.defaultTimeframe;
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[400px] shrink-0">
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-100 shrink-0">
       <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
       
       <div className="flex flex-col mb-4 relative z-10 shrink-0 items-center text-center">
