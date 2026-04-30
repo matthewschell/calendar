@@ -39,9 +39,9 @@ export default function DailyContent() {
       try {
         const unitParam = weatherConfig.units === 'fahrenheit' ? '&temperature_unit=fahrenheit' : '';
         
-        // Always fetch the extended data so it's ready when they expand it
+        // We now ALWAYS fetch daily max/min so we can display Today's High/Low
         const modeParam = weatherConfig.displayMode === 'hourly' 
-          ? '&hourly=temperature_2m,weather_code&forecast_days=2' 
+          ? '&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=2' 
           : `&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7`;
 
         const weatherRes = await fetch(
@@ -61,11 +61,13 @@ export default function DailyContent() {
   const getWeatherEmoji = (code) => {
     if (code === undefined || code === null) return '☁️';
     if (code === 0) return '☀️'; 
-    if (code > 0 && code < 4) return '⛅'; 
+    if (code === 1) return '🌤️'; 
+    if (code === 2) return '⛅'; 
+    if (code === 3) return '☁️'; 
     if (code >= 45 && code <= 48) return '🌫️'; 
     if (code >= 51 && code <= 67) return '🌧️'; 
     if (code >= 71 && code <= 77) return '❄️'; 
-    if (code >= 80 && code <= 82) return '🌧️'; 
+    if (code >= 80 && code <= 82) return '🌦️'; 
     if (code >= 95) return '⛈️'; 
     return '☁️';
   };
@@ -120,6 +122,9 @@ export default function DailyContent() {
   }
 
   const currentTemp = Math.round(weather?.current?.temperature_2m || 0);
+  const todayMax = weather?.daily?.temperature_2m_max?.[0] !== undefined ? Math.round(weather.daily.temperature_2m_max[0]) : '--';
+  const todayMin = weather?.daily?.temperature_2m_min?.[0] !== undefined ? Math.round(weather.daily.temperature_2m_min[0]) : '--';
+  
   const tempUnit = weatherConfig.units === 'fahrenheit' ? '°F' : '°C';
   const advice = weather ? getKidFriendlyAdvice(weather?.current?.weather_code, currentTemp) : null;
 
@@ -162,18 +167,23 @@ export default function DailyContent() {
           )}
         </div>
 
-        {/* Ultra-Compact Main Weather Row */}
+        {/* Main Weather Row */}
         <div className="relative z-10 flex items-center justify-between w-full">
           
-          {/* Temperature Side (Icon included here ONLY if advice is active) */}
+          {/* Temperature, City & Today's High/Low */}
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex flex-col justify-center">
               <div className="text-5xl font-bold flex items-start tracking-tighter leading-none">
                 {currentTemp}
                 <span className="text-xl text-sky-100 font-semibold tracking-normal mt-1 ml-0.5">{tempUnit}</span>
               </div>
-              <div className="text-sky-100 text-[10px] md:text-xs uppercase tracking-wider mt-1.5 font-medium truncate max-w-[100px] md:max-w-[120px]">
-                {weatherConfig.city}
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="text-sky-100 text-[10px] md:text-xs uppercase tracking-wider font-medium truncate max-w-[80px] md:max-w-[100px]">
+                  {weatherConfig.city}
+                </div>
+                <div className="text-sky-100 text-[10px] font-bold tracking-wider px-1.5 py-0.5 bg-white/10 rounded-md">
+                  H:{todayMax}° L:{todayMin}°
+                </div>
               </div>
             </div>
             
