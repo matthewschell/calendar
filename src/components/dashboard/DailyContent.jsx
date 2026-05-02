@@ -181,7 +181,7 @@ export default function DailyContent() {
                 <div className="text-sky-100 text-[10px] md:text-xs uppercase tracking-wider font-medium truncate max-w-[80px] md:max-w-[100px]">
                   {weatherConfig.city}
                 </div>
-                <div className="text-sky-100 text-[10px] font-bold tracking-wider px-1.5 py-0.5 bg-white/10 rounded-md">
+                <div className="text-sky-100 text-[12px] font-bold tracking-wider px-1.5 py-0.5 bg-white/10 rounded-md">
                   H:{todayMax}° L:{todayMin}°
                 </div>
               </div>
