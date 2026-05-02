@@ -1,30 +1,35 @@
 // src/components/dashboard/MemberProfileModal.jsx
-import { useState } from 'react';
-import { X, Upload, Image as ImageIcon, Wallet, Star, TrendingUp, Loader2 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Upload, Image as ImageIcon, Wallet, Star, TrendingUp, Loader2, UserCircle } from 'lucide-react';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
-
-const DEFAULT_AVATARS = [
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack&backgroundColor=b6e3f4',
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Lily&backgroundColor=c0aede',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Robot1&backgroundColor=d1d4f9',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Robot2&backgroundColor=ffdfbf',
-  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Player1&backgroundColor=b6e3f4',
-  'https://api.dicebear.com/7.x/pixel-art/svg?seed=Player2&backgroundColor=c0aede',
-  'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy&backgroundColor=d1d4f9',
-  'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cool&backgroundColor=ffdfbf',
-];
 
 export default function MemberProfileModal({ member, onClose }) {
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [defaultAvatars, setDefaultAvatars] = useState([]);
+
+  // Fetch the admin-defined avatars when they open the edit screen
+  useEffect(() => {
+    if (!isEditingAvatar) return;
+    const fetchAvatars = async () => {
+      const docRef = doc(db, 'settings', 'avatars');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().urls) {
+        setDefaultAvatars(docSnap.data().urls);
+      }
+    };
+    fetchAvatars();
+  }, [isEditingAvatar]);
 
   if (!member) return null;
 
   const currentPoints = member.points || 0;
   const payRate = member.payRate || 0;
   const estimatedPayout = (currentPoints * payRate).toFixed(2);
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${member.name}&background=cbd5e1&color=fff&size=128`;
 
   const handleUpdateAvatar = async (avatarUrl) => {
     try {
@@ -44,7 +49,6 @@ export default function MemberProfileModal({ member, onClose }) {
 
     setUploading(true);
     try {
-      // Create a unique file name in the 'avatars' folder
       const fileRef = ref(storage, `avatars/${member.id}_${Date.now()}`);
       await uploadBytes(fileRef, file);
       const downloadUrl = await getDownloadURL(fileRef);
@@ -57,22 +61,24 @@ export default function MemberProfileModal({ member, onClose }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+  // We use createPortal to inject this modal directly into the <body> tag
+  // This completely bypasses the overflow-hidden trap of the leaderboard container!
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header Section */}
         <div className="bg-indigo-600 p-6 text-center relative">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 text-indigo-200 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+            className="absolute top-4 right-4 text-indigo-200 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors focus:outline-none"
           >
             <X className="w-5 h-5" />
           </button>
           
           <div className="relative inline-block mt-4 mb-3 group">
             <img 
-              src={member.avatar || DEFAULT_AVATARS[0]} 
+              src={member.avatar || fallbackAvatar} 
               alt={member.name}
               className="w-28 h-28 rounded-full border-4 border-white shadow-lg object-cover bg-indigo-100"
             />
@@ -85,29 +91,37 @@ export default function MemberProfileModal({ member, onClose }) {
           </div>
           
           <h2 className="text-3xl font-black text-white tracking-tight">{member.name}</h2>
-          <p className="text-indigo-200 font-medium text-sm mt-1 uppercase tracking-wider">Family Member</p>
+          <p className="text-indigo-200 font-medium text-sm mt-1 uppercase tracking-wider">
+            {member.isKid ? 'Family Member' : 'Parent / Admin'}
+          </p>
         </div>
 
         {/* Content Section */}
         <div className="p-6">
-          
           {isEditingAvatar ? (
-            <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <h3 className="font-bold text-slate-800 text-center">Choose an Avatar</h3>
               
-              <div className="grid grid-cols-4 gap-3">
-                {DEFAULT_AVATARS.map((url, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => handleUpdateAvatar(url)}
-                    className="aspect-square rounded-2xl bg-slate-50 border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all overflow-hidden"
-                  >
-                    <img src={url} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              {defaultAvatars.length === 0 ? (
+                <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <UserCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-slate-500">No default avatars found. Ask a parent to upload some in the admin panel!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                  {defaultAvatars.map((url, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleUpdateAvatar(url)}
+                      className="aspect-square rounded-2xl bg-slate-50 border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all overflow-hidden focus:outline-none"
+                    >
+                      <img src={url} alt={`Avatar option ${idx}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <div className="relative">
+              <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200"></div>
                 </div>
@@ -124,29 +138,27 @@ export default function MemberProfileModal({ member, onClose }) {
 
               <button 
                 onClick={() => setIsEditingAvatar(false)}
-                className="w-full py-3 text-slate-500 font-bold hover:text-slate-700 transition-colors"
+                className="w-full py-2 text-slate-500 font-bold hover:text-slate-700 transition-colors focus:outline-none"
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* Stats Grid */}
+            <div className="space-y-4 animate-in fade-in duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex flex-col items-center justify-center">
                   <Star className="w-6 h-6 text-amber-500 mb-2" />
                   <span className="text-3xl font-black text-amber-600 leading-none">{currentPoints}</span>
-                  <span className="text-xs font-bold text-amber-600/70 uppercase tracking-wider mt-1">Current Points</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-600/70 uppercase tracking-wider mt-1 text-center">Current Points</span>
                 </div>
                 
                 <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex flex-col items-center justify-center">
                   <Wallet className="w-6 h-6 text-emerald-500 mb-2" />
                   <span className="text-3xl font-black text-emerald-600 leading-none">${estimatedPayout}</span>
-                  <span className="text-xs font-bold text-emerald-600/70 uppercase tracking-wider mt-1">Est. Payout</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-emerald-600/70 uppercase tracking-wider mt-1 text-center">Est. Payout</span>
                 </div>
               </div>
 
-              {/* Pay Rate Info */}
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600">
@@ -154,7 +166,7 @@ export default function MemberProfileModal({ member, onClose }) {
                   </div>
                   <div>
                     <div className="font-bold text-slate-800">Current Pay Rate</div>
-                    <div className="text-xs text-slate-500 font-medium">How much each point is worth</div>
+                    <div className="text-xs text-slate-500 font-medium">Value of one point</div>
                   </div>
                 </div>
                 <div className="font-black text-indigo-600 text-lg">
@@ -166,6 +178,7 @@ export default function MemberProfileModal({ member, onClose }) {
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body // This mounts the modal outside the Dashboard container
   );
 }
