@@ -1,18 +1,23 @@
 // src/config/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database'; // Old legacy DB
+import { getFirestore } from 'firebase/firestore'; // New atomic DB
+import { getStorage } from 'firebase/storage'; // Added for the new Avatar uploads
 
 const firebaseConfig = {
-  // Your config stays exactly the same here
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyDg-I2BAuXt2sHDJa-ih-B6z5km8HlOl0U",
+  authDomain: "family-calendar-ebf3b.firebaseapp.com",
+  databaseURL: "https://family-calendar-ebf3b-default-rtdb.firebaseio.com",
+  projectId: "family-calendar-ebf3b",
+  storageBucket: "family-calendar-ebf3b.firebasestorage.app",
+  messagingSenderId: "964895867498",
+  appId: "1:964895867498:web:f69b0c636201303a3e4013"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Export all database instances so our hooks can use them
+export const rtdb = getDatabase(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app); // We need this for avatar uploads!
+export const storage = getStorage(app);
