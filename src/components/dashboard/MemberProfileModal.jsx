@@ -18,8 +18,17 @@ export default function MemberProfileModal({ member, onClose }) {
   // History State
   const [historyData, setHistoryData] = useState([]);
   const [weeklyPoints, setWeeklyPoints] = useState(0);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  // Chart Controls
   const [chartType, setChartType] = useState('bar'); // 'bar' or 'line'
+  const [historyTimeframe, setHistoryTimeframe] = useState('weekly'); // 'weekly' or 'monthly'
+  
+  // The reference date used to calculate the start/end of the viewed range
+  const [referenceDate, setReferenceDate] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
 
   // Fetch Admin Libraries & Config
   useEffect(() => {
@@ -41,37 +50,58 @@ export default function MemberProfileModal({ member, onClose }) {
     return () => unsub();
   }, []);
 
-  // Fetch History for the Selected Month
+  // Fetch History for the Selected Range
   useEffect(() => {
     if (!member) return;
 
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+    // The actual "Today" and actual "Current Week" for top summary stats
+    const actualToday = new Date();
+    const actualStartOfWeek = new Date(actualToday);
+    actualStartOfWeek.setDate(actualToday.getDate() - actualToday.getDay());
+    actualStartOfWeek.setHours(0, 0, 0, 0);
 
-    // For the summary stats at the top, we always want the *current* week, regardless of what month is selected below.
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Calculate the start and end of the currently viewed chart range
+    let startOfRange = new Date(referenceDate);
+    let endOfRange = new Date(referenceDate);
 
-    // We query all completions for this member for the selected month to build the chart
-    // We also query completions for the current week to build the top stats. 
-    // To keep it simple, we'll just query the widest range needed and filter locally.
-    const minDate = startOfWeek < startOfMonth ? startOfWeek : startOfMonth;
-    const maxDate = today > endOfMonth ? today : endOfMonth;
+    if (historyTimeframe === 'weekly') {
+      startOfRange.setDate(referenceDate.getDate() - referenceDate.getDay());
+      endOfRange = new Date(startOfRange);
+      endOfRange.setDate(startOfRange.getDate() + 6);
+    } else {
+      startOfRange = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+      endOfRange = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+    }
+    startOfRange.setHours(0, 0, 0, 0);
+    endOfRange.setHours(23, 59, 59, 999);
 
-    const q = query(collection(db, 'completions'), where('completedBy', '==', member.id), where('timestamp', '>=', minDate), where('timestamp', '<=', maxDate));
+    // Query bounds to capture both the summary week and the viewed chart week/month
+    const minDate = startOfRange < actualStartOfWeek ? startOfRange : actualStartOfWeek;
+    const maxDate = endOfRange > actualToday ? endOfRange : actualToday;
+    maxDate.setHours(23, 59, 59, 999);
+
+    const q = query(
+      collection(db, 'completions'), 
+      where('completedBy', '==', member.id), 
+      where('timestamp', '>=', minDate), 
+      where('timestamp', '<=', maxDate)
+    );
     
     const unsub = onSnapshot(q, (snapshot) => {
       let currentWeekPts = 0;
-      const daysInMonth = endOfMonth.getDate();
       const dailyMap = {};
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-      // Initialize map for every day of the selected month
-      for (let i = 1; i <= daysInMonth; i++) {
-        const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
-        const isPayDay = d.getDay() === allowanceConfig.payDay;
-        dailyMap[i] = { dayNum: i, pts: 0, cumulative: 0, isPayDay };
+      // Initialize map for the selected timeframe
+      const daysInRange = historyTimeframe === 'weekly' ? 7 : endOfRange.getDate();
+      
+      for (let i = 0; i < daysInRange; i++) {
+        const d = new Date(startOfRange);
+        d.setDate(startOfRange.getDate() + i);
+        const isPayDay = d.getDay() === (allowanceConfig.payDay ?? 5);
+        const dayLabel = historyTimeframe === 'weekly' ? dayNames[d.getDay()] : d.getDate().toString();
+        
+        dailyMap[d.toDateString()] = { dayLabel, pts: 0, isPayDay, dateObj: d };
       }
 
       snapshot.forEach(doc => {
@@ -79,33 +109,29 @@ export default function MemberProfileModal({ member, onClose }) {
         const date = data.timestamp?.toDate();
         if (!date) return;
 
-        // Tally current week points (Sunday to Saturday of the actual current week)
-        if (date >= startOfWeek && date <= today) {
+        // Tally actual current week points (Sunday to Saturday of this week)
+        if (date >= actualStartOfWeek && date <= actualToday) {
           currentWeekPts += (Number(data.points) || 0);
         }
 
-        // Tally points for the chart if the completion falls within the selected month
-        if (date >= startOfMonth && date <= endOfMonth) {
-          const dayNum = date.getDate();
-          if (dailyMap[dayNum]) {
-            dailyMap[dayNum].pts += (Number(data.points) || 0);
+        // Tally points for the chart if the completion falls within the viewed range
+        if (date >= startOfRange && date <= endOfRange) {
+          const dateString = date.toDateString();
+          if (dailyMap[dateString]) {
+            dailyMap[dateString].pts += (Number(data.points) || 0);
           }
         }
       });
 
-      // Calculate cumulative totals for the line chart
-      let runningTotal = 0;
-      const chartArray = Object.values(dailyMap).map(day => {
-        runningTotal += day.pts;
-        return { ...day, cumulative: runningTotal };
-      });
+      // Sort ensuring date order
+      const chartArray = Object.values(dailyMap).sort((a, b) => a.dateObj - b.dateObj);
 
       setWeeklyPoints(currentWeekPts);
       setHistoryData(chartArray);
     });
 
     return () => unsub();
-  }, [member, currentMonth, allowanceConfig.payDay]);
+  }, [member, referenceDate, historyTimeframe, allowanceConfig.payDay]);
 
   if (!member) return null;
 
@@ -113,13 +139,13 @@ export default function MemberProfileModal({ member, onClose }) {
   const weeklyEarned = (weeklyPoints * payRate).toFixed(2);
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${member.name}&background=cbd5e1&color=fff&size=128`;
   
-  const maxBarPoints = Math.max(...historyData.map(d => d.pts), 10);
-  const maxLinePoints = Math.max(...historyData.map(d => d.cumulative), 10);
+  // We use the same max points for both charts now, adding a minimum ceiling of 10 so low days don't look huge
+  const maxPoints = Math.max(...historyData.map(d => d.pts), 10);
 
-  // Build SVG Polyline points
+  // Build SVG Polyline points for the daily point values
   const linePoints = historyData.map((d, i) => {
     const x = (i / (historyData.length - 1 || 1)) * 100;
-    const y = 100 - ((d.cumulative / maxLinePoints) * 100);
+    const y = 95 - ((d.pts / maxPoints) * 90); // Scale between 5% and 95% so the line doesn't clip the top/bottom
     return `${x},${y}`;
   }).join(' ');
 
@@ -151,9 +177,29 @@ export default function MemberProfileModal({ member, onClose }) {
     }
   };
 
-  const shiftMonth = (offset) => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  const shiftTimeframe = (offset) => {
+    setReferenceDate(prev => {
+      const next = new Date(prev);
+      if (historyTimeframe === 'weekly') {
+        next.setDate(prev.getDate() + (offset * 7));
+      } else {
+        next.setMonth(prev.getMonth() + offset);
+      }
+      return next;
+    });
   };
+
+  // Generate the formatted label for the current viewed range
+  let rangeLabel = '';
+  if (historyTimeframe === 'weekly') {
+    const wStart = new Date(referenceDate);
+    wStart.setDate(referenceDate.getDate() - referenceDate.getDay());
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wStart.getDate() + 6);
+    rangeLabel = `${wStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})} - ${wEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}`;
+  } else {
+    rangeLabel = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -279,31 +325,52 @@ export default function MemberProfileModal({ member, onClose }) {
               </div>
 
               {/* Advanced History Chart */}
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                 
                 {/* Chart Header & Controls */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => shiftMonth(-1)} className="p-1 hover:bg-slate-200 rounded text-slate-500"><ChevronLeft className="w-4 h-4"/></button>
-                    <h3 className="font-bold text-slate-800 w-24 text-center">
-                      {currentMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                    </h3>
-                    <button onClick={() => shiftMonth(1)} className="p-1 hover:bg-slate-200 rounded text-slate-500"><ChevronRight className="w-4 h-4"/></button>
+                <div className="flex flex-col gap-3 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <History className="w-4 h-4 text-indigo-500" /> History
+                    </div>
+                    {/* Timeframe Toggle */}
+                    <div className="flex bg-slate-200 p-1 rounded-lg shrink-0">
+                      <button 
+                        onClick={() => { setHistoryTimeframe('weekly'); setReferenceDate(new Date()); }}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Week
+                      </button>
+                      <button 
+                        onClick={() => { setHistoryTimeframe('monthly'); setReferenceDate(new Date()); }}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Month
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex bg-slate-200 p-1 rounded-lg">
-                    <button 
-                      onClick={() => setChartType('bar')}
-                      className={`p-1 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setChartType('line')}
-                      className={`p-1 rounded-md transition-colors ${chartType === 'line' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      <LineChart className="w-4 h-4" />
-                    </button>
+                  <div className="flex items-center justify-between bg-white px-2 py-1 rounded-lg border border-slate-100">
+                    <button onClick={() => shiftTimeframe(-1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ChevronLeft className="w-4 h-4"/></button>
+                    <h3 className="font-bold text-slate-700 text-xs sm:text-sm text-center truncate px-2">
+                      {rangeLabel}
+                    </h3>
+                    <button onClick={() => shiftTimeframe(1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ChevronRight className="w-4 h-4"/></button>
+                    
+                    <div className="flex bg-slate-100 p-0.5 rounded-lg shrink-0 ml-2">
+                      <button 
+                        onClick={() => setChartType('bar')}
+                        className={`p-1 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setChartType('line')}
+                        className={`p-1 rounded-md transition-colors ${chartType === 'line' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        <LineChart className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
@@ -311,26 +378,26 @@ export default function MemberProfileModal({ member, onClose }) {
                 <div className="relative h-32 w-full mt-2">
                   
                   {chartType === 'bar' ? (
-                    /* BAR CHART (Daily Points) */
-                    <div className="absolute inset-0 flex items-end justify-between px-1">
+                    /* BAR CHART */
+                    <div className="absolute inset-0 flex items-end justify-between px-1 gap-0.5">
                       {historyData.map((dayData, i) => {
-                        const heightPct = Math.max((dayData.pts / maxBarPoints) * 100, dayData.pts > 0 ? 8 : 0);
+                        const heightPct = Math.max((dayData.pts / maxPoints) * 100, dayData.pts > 0 ? 8 : 0);
                         return (
-                          <div key={i} className="flex flex-col items-center justify-end h-full w-[3%] relative group">
+                          <div key={i} className="flex flex-col items-center justify-end h-full flex-1 relative group">
                             {/* Hover Tooltip */}
                             <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded pointer-events-none transition-opacity z-20 whitespace-nowrap">
-                              {dayData.dayNum}: {dayData.pts} pts
+                              {dayData.dayLabel}: {dayData.pts} pts
                             </div>
                             
                             {/* Pay Day Indicator */}
                             {dayData.isPayDay && (
-                              <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-0.5 z-10" title="Pay Day!">
+                              <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-[1px] z-10" title="Pay Day!">
                                 <DollarSign className="w-2.5 h-2.5" />
                               </div>
                             )}
                             
                             <div
-                              className={`w-full rounded-t-[2px] transition-all duration-500 ${dayData.isPayDay ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                              className={`w-full max-w-[24px] rounded-t-sm transition-all duration-500 ${dayData.isPayDay ? 'bg-emerald-400' : 'bg-amber-400'}`}
                               style={{ height: `${heightPct}%` }}
                             ></div>
                           </div>
@@ -338,17 +405,17 @@ export default function MemberProfileModal({ member, onClose }) {
                       })}
                     </div>
                   ) : (
-                    /* LINE CHART (Cumulative Earnings/Points) */
-                    <div className="absolute inset-0">
+                    /* LINE CHART (Daily Points) */
+                    <div className="absolute inset-0 px-2 sm:px-4">
                       {/* Grid Lines */}
-                      <div className="absolute inset-0 flex flex-col justify-between border-l border-b border-slate-200">
+                      <div className="absolute inset-0 flex flex-col justify-between border-l border-b border-slate-200 ml-2">
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                       </div>
                       
                       {/* The Line */}
-                      <svg className="absolute inset-0 w-full h-full overflow-visible z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+                      <svg className="absolute inset-0 w-full h-full overflow-visible z-10 ml-2" preserveAspectRatio="none" viewBox="0 0 100 100">
                         <polyline 
                           points={linePoints}
                           fill="none"
@@ -361,15 +428,15 @@ export default function MemberProfileModal({ member, onClose }) {
                       </svg>
 
                       {/* Line Chart Tooltips & Payday markers */}
-                      <div className="absolute inset-0 flex justify-between">
+                      <div className="absolute inset-0 flex justify-between ml-2">
                          {historyData.map((dayData, i) => (
-                           <div key={i} className="h-full w-[3%] relative group z-20">
+                           <div key={i} className="h-full flex-1 relative group z-20">
                              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded pointer-events-none transition-opacity -translate-x-1/2 whitespace-nowrap">
-                               Day {dayData.dayNum}: ${(dayData.cumulative * payRate).toFixed(2)}
+                               {dayData.dayLabel}: {dayData.pts} pts
                              </div>
                              {dayData.isPayDay && (
-                               <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-0.5 -translate-x-1/2" title="Pay Day!">
-                                 <DollarSign className="w-2 h-2" />
+                               <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-[1px] -translate-x-1/2" title="Pay Day!">
+                                 <DollarSign className="w-2.5 h-2.5" />
                                </div>
                              )}
                            </div>
@@ -379,9 +446,17 @@ export default function MemberProfileModal({ member, onClose }) {
                   )}
                 </div>
 
-                <div className="mt-6 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  {chartType === 'bar' ? 'Daily Points Earned' : 'Cumulative Allowance Growth'}
+                <div className="mt-8 flex justify-between px-1">
+                  {historyData.map((dayData, i) => (
+                    <div 
+                      key={i} 
+                      className={`font-bold uppercase flex-1 text-center truncate ${historyTimeframe === 'monthly' ? 'text-[8px] sm:text-[10px]' : 'text-[10px]'} ${dayData.isPayDay ? 'text-emerald-600' : 'text-slate-400'}`}
+                    >
+                      {dayData.dayLabel}
+                    </div>
+                  ))}
                 </div>
+
               </div>
 
             </div>
