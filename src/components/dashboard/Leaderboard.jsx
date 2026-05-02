@@ -4,6 +4,7 @@ import { Trophy, Medal, AlertCircle, Clock } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import MemberProfileModal from './MemberProfileModal';
 
 export default function Leaderboard() {
   const { members, loading: membersLoading } = useFamilyMembers();
@@ -18,6 +19,9 @@ export default function Leaderboard() {
   
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
+  
+  // State for our new Profile Modal
+  const [selectedMember, setSelectedMember] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
@@ -177,7 +181,8 @@ export default function Leaderboard() {
             return (
               <div 
                 key={kid.id || index}
-                className="flex items-center justify-between p-3.5 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm"
+                onClick={() => setSelectedMember(kid)}
+                className="flex items-center justify-between p-3.5 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm cursor-pointer hover:shadow-md group"
                 style={{ borderColor: `${displayColor}40` }}
               >
                 <div className="flex items-center gap-3">
@@ -191,7 +196,7 @@ export default function Leaderboard() {
                       displayName.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="font-bold text-slate-700 truncate text-base">
+                  <span className="font-bold text-slate-700 truncate text-base group-hover:text-indigo-600 transition-colors">
                     {displayName}
                   </span>
                 </div>
@@ -207,6 +212,12 @@ export default function Leaderboard() {
           })
         )}
       </div>
+
+      <MemberProfileModal 
+        member={selectedMember} 
+        onClose={() => setSelectedMember(null)} 
+      />
+
     </div>
   );
 }
