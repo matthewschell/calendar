@@ -177,7 +177,6 @@ export default function MemberProfileModal({ member, onClose }) {
     }
   };
 
-  // CORRECTED: Timeframe pagination logic
   const shiftTimeframe = (offset) => {
     setReferenceDate(prev => {
       const next = new Date(prev);
@@ -190,7 +189,7 @@ export default function MemberProfileModal({ member, onClose }) {
     });
   };
 
-  // CORRECTED: Generate the formatted label for the current viewed range
+  // Generate the formatted label for the current viewed range
   let rangeLabel = '';
   if (historyTimeframe === 'weekly') {
     const wStart = new Date(referenceDate);
@@ -201,6 +200,13 @@ export default function MemberProfileModal({ member, onClose }) {
   } else {
     rangeLabel = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
+
+  // Helper to determine if a label should be shown in monthly view to prevent crowding
+  const shouldShowLabel = (index, total) => {
+    if (historyTimeframe === 'weekly') return true;
+    if (index === 0 || index === total - 1) return true; // Always show first and last
+    return index % 5 === 0; // Show every 5th day
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -380,7 +386,7 @@ export default function MemberProfileModal({ member, onClose }) {
                   
                   {chartType === 'bar' ? (
                     /* BAR CHART */
-                    <div className="absolute inset-0 flex items-end justify-between px-1 gap-0.5">
+                    <div className={`absolute inset-0 flex items-end justify-between px-1 ${historyTimeframe === 'weekly' ? 'gap-1' : 'gap-[1px]'}`}>
                       {historyData.map((dayData, i) => {
                         const heightPct = Math.max((dayData.pts / maxPoints) * 100, dayData.pts > 0 ? 8 : 0);
                         return (
@@ -398,7 +404,7 @@ export default function MemberProfileModal({ member, onClose }) {
                             )}
                             
                             <div
-                              className={`w-full max-w-[24px] rounded-t-sm transition-all duration-500 ${dayData.isPayDay ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                              className={`w-full rounded-t-sm transition-all duration-500 ${historyTimeframe === 'weekly' ? 'max-w-[24px]' : ''} ${dayData.isPayDay ? 'bg-emerald-400' : 'bg-amber-400'}`}
                               style={{ height: `${heightPct}%` }}
                             ></div>
                           </div>
@@ -453,7 +459,7 @@ export default function MemberProfileModal({ member, onClose }) {
                       key={i} 
                       className={`font-bold uppercase flex-1 text-center truncate ${historyTimeframe === 'monthly' ? 'text-[8px] sm:text-[10px]' : 'text-[10px]'} ${dayData.isPayDay ? 'text-emerald-600' : 'text-slate-400'}`}
                     >
-                      {dayData.dayLabel}
+                      {shouldShowLabel(i, historyData.length) ? dayData.dayLabel : ''}
                     </div>
                   ))}
                 </div>
