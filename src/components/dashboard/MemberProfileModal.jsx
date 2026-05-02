@@ -177,6 +177,7 @@ export default function MemberProfileModal({ member, onClose }) {
     }
   };
 
+  // CORRECTED: Timeframe pagination logic
   const shiftTimeframe = (offset) => {
     setReferenceDate(prev => {
       const next = new Date(prev);
@@ -189,7 +190,7 @@ export default function MemberProfileModal({ member, onClose }) {
     });
   };
 
-  // Generate the formatted label for the current viewed range
+  // CORRECTED: Generate the formatted label for the current viewed range
   let rangeLabel = '';
   if (historyTimeframe === 'weekly') {
     const wStart = new Date(referenceDate);
