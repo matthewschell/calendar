@@ -23,18 +23,22 @@ export default function Leaderboard() {
   // State for our new Profile Modal
   const [selectedMember, setSelectedMember] = useState(null);
 
+  // Fetch config once
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
       if (docSnap.exists()) {
-        const newConfig = docSnap.data();
-        setWidgetConfig(newConfig);
-        if (!newConfig.enabledTimeframes.includes(timeframe)) {
-          setTimeframe(newConfig.defaultTimeframe || 'daily');
-        }
+        setWidgetConfig(docSnap.data());
       }
     });
     return () => unsub();
-  }, [timeframe]);
+  }, []);
+
+  // Ensure timeframe is valid based on config
+  useEffect(() => {
+    if (!widgetConfig.enabledTimeframes.includes(timeframe)) {
+      setTimeframe(widgetConfig.defaultTimeframe || 'daily');
+    }
+  }, [widgetConfig, timeframe]);
 
   useEffect(() => {
     if (timeframe !== widgetConfig.defaultTimeframe) {
@@ -67,7 +71,8 @@ export default function Leaderboard() {
     if (timeframe === 'daily') {
       startDate.setHours(0, 0, 0, 0);
     } else if (timeframe === 'weekly') {
-      startDate.setDate(now.getDate() - 7);
+      // ALIGNED: Set start date strictly to Sunday of the current week
+      startDate.setDate(now.getDate() - now.getDay());
       startDate.setHours(0, 0, 0, 0);
     } else if (timeframe === 'monthly') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -124,9 +129,6 @@ export default function Leaderboard() {
           Live {timeframe} Leaderboard
         </h2>
         
-        {/* Reserved space container: h-6 ensures the DOM always holds this vertical space,
-          preventing the elements below from jumping when the timer mounts/unmounts.
-        */}
         <div className="h-6 mt-1 flex items-center justify-center w-full">
           {!isDefaultView && revertCountdown !== null && (
             <div className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 animate-pulse">
