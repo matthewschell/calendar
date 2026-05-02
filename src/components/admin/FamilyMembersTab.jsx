@@ -1,9 +1,9 @@
 // src/components/admin/FamilyMembersTab.jsx
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
-import { Edit2, Trash2, Plus, X, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Loader2, Image as ImageIcon, Music, PlayCircle } from 'lucide-react';
 
 export default function FamilyMembersTab() {
   const [members, setMembers] = useState([]);
@@ -11,9 +11,11 @@ export default function FamilyMembersTab() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentMember, setCurrentMember] = useState(null);
 
-  // Avatar Library State
+  // Library States
   const [avatarLibrary, setAvatarLibrary] = useState([]);
+  const [soundLibrary, setSoundLibrary] = useState([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingSound, setUploadingSound] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'familyMembers'), (snapshot) => {
@@ -39,6 +41,18 @@ export default function FamilyMembersTab() {
     return () => unsub();
   }, []);
 
+  // Listen to the shared Sound Library
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'sounds'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSoundLibrary(docSnap.data().items || []);
+      } else {
+        setSoundLibrary([]);
+      }
+    });
+    return () => unsub();
+  }, []);
+
   const handleSave = async (e) => {
     e.preventDefault();
     try {
@@ -56,7 +70,8 @@ export default function FamilyMembersTab() {
         await addDoc(collection(db, 'familyMembers'), {
           ...memberData,
           points: 0,
-          avatar: ''
+          avatar: '',
+          signatureSound: ''
         });
       }
       setIsEditing(false);
@@ -105,6 +120,48 @@ export default function FamilyMembersTab() {
     } catch (error) {
       console.error("Error removing avatar:", error);
     }
+  };
+
+  // Sound Library Handlers
+  const handleUploadSound = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const soundName = window.prompt("Give this signature sound a short name (e.g., 'Magic Wand'):");
+    if (!soundName) return;
+
+    setUploadingSound(true);
+    try {
+      const fileRef = ref(storage, `sounds/library_${Date.now()}_${file.name}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      
+      await setDoc(doc(db, 'settings', 'sounds'), {
+        items: arrayUnion({ name: soundName, url })
+      }, { merge: true });
+
+    } catch (error) {
+      console.error("Error uploading sound:", error);
+      alert("Failed to upload signature sound.");
+    } finally {
+      setUploadingSound(false);
+    }
+  };
+
+  const handleDeleteSound = async (soundObj) => {
+    if (!window.confirm(`Remove "${soundObj.name}" from the sound choices?`)) return;
+    try {
+      await setDoc(doc(db, 'settings', 'sounds'), {
+        items: arrayRemove(soundObj)
+      }, { merge: true });
+    } catch (error) {
+      console.error("Error removing sound:", error);
+    }
+  };
+
+  const playPreview = (url) => {
+    const audio = new Audio(url);
+    audio.play().catch(e => console.error("Error playing sound:", e));
   };
 
   if (loading) return <div className="p-4 animate-pulse">Loading members...</div>;
@@ -257,15 +314,15 @@ export default function FamilyMembersTab() {
         </div>
       </div>
 
-      {/* NEW: Default Avatar Library Management */}
+      {/* Avatar Library Management */}
       <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 mb-1">
           <ImageIcon className="w-5 h-5 text-indigo-500" />
           <h3 className="font-bold text-slate-800">Default Avatar Library</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Images uploaded here will be available for kids to quickly choose from in their profile modal.</p>
+        <p className="text-xs text-slate-500 mb-4">Images uploaded here will be available for kids to choose from in their profile modal.</p>
         
-        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 mb-4">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
           {avatarLibrary.map((url, idx) => (
             <div key={idx} className="relative aspect-square rounded-xl border-2 border-slate-200 overflow-hidden group bg-white shadow-sm">
               <img src={url} alt="Library Avatar" className="w-full h-full object-cover" />
@@ -285,6 +342,40 @@ export default function FamilyMembersTab() {
             <input type="file" accept="image/*" className="hidden" onChange={handleUploadToLibrary} disabled={uploadingAvatar} />
           </label>
         </div>
+      </div>
+
+      {/* Signature Sound Library Management */}
+      <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Music className="w-5 h-5 text-indigo-500" />
+          <h3 className="font-bold text-slate-800">Signature Sound Library</h3>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">Audio files (MP3/WAV) uploaded here can be selected by kids as their chore completion sound.</p>
+        
+        <div className="space-y-2 mb-4">
+          {soundLibrary.map((sound, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="flex items-center gap-3">
+                <button onClick={() => playPreview(sound.url)} className="text-indigo-500 hover:text-indigo-700 transition-colors">
+                  <PlayCircle className="w-6 h-6" />
+                </button>
+                <span className="font-bold text-slate-700">{sound.name}</span>
+              </div>
+              <button 
+                onClick={() => handleDeleteSound(sound)}
+                className="text-slate-400 hover:text-rose-500 transition-colors p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 text-indigo-600 font-bold cursor-pointer hover:bg-indigo-100 hover:border-indigo-400 transition-colors shadow-sm">
+          {uploadingSound ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+          {uploadingSound ? 'Uploading...' : 'Upload New Sound'}
+          <input type="file" accept="audio/*" className="hidden" onChange={handleUploadSound} disabled={uploadingSound} />
+        </label>
       </div>
 
     </div>
