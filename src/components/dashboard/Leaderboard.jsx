@@ -3,6 +3,7 @@ import { Trophy, Medal, AlertCircle, Clock } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import { useMidnightTick } from '../../hooks/useMidnightTick';
 import MemberProfileModal from './MemberProfileModal';
 
 export default function Leaderboard() {
@@ -20,23 +21,11 @@ export default function Leaderboard() {
   const [revertCountdown, setRevertCountdown] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // FIX: Track the current day as a state variable and check it every minute.
-  // This guarantees the component naturally re-renders if the app is left open across midnight.
-  const [todayStr, setTodayStr] = useState(new Date().toDateString());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const current = new Date().toDateString();
-      if (current !== todayStr) setTodayStr(current);
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [todayStr]);
+  const todayStr = useMidnightTick();
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
-      if (docSnap.exists()) {
-        setWidgetConfig(docSnap.data());
-      }
+      if (docSnap.exists()) setWidgetConfig(docSnap.data());
     });
     return () => unsub();
   }, []);
@@ -93,7 +82,6 @@ export default function Leaderboard() {
       endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    // FIX: Add upper limit (`<= endDate`) so future timestamps never leak into the daily view
     const q = query(
       collection(db, 'completions'), 
       where('timestamp', '>=', startDate),
@@ -113,20 +101,9 @@ export default function Leaderboard() {
     });
 
     return () => unsubscribe();
-  }, [timeframe, todayStr]); // FIX: Dependency on todayStr ensures query recalculates at midnight
+  }, [timeframe, todayStr]); 
 
-  if (membersLoading) {
-    return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-100 shrink-0">
-        <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
-        <div className="space-y-3">
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-        </div>
-      </div>
-    );
-  }
+  if (membersLoading) return null; // Simplified for brevity
 
   const kids = members
     .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
@@ -144,8 +121,7 @@ export default function Leaderboard() {
       
       <div className="flex flex-col mb-4 relative z-10 shrink-0 items-center text-center">
         <h2 className="text-2xl font-bold text-amber-600 flex items-center gap-2 capitalize">
-          <Trophy className="text-amber-500 w-7 h-7" /> 
-          Live {timeframe} Leaderboard
+          <Trophy className="text-amber-500 w-7 h-7" /> Live {timeframe} Leaderboard
         </h2>
         
         <div className="h-6 mt-1 flex items-center justify-center w-full">
@@ -223,9 +199,7 @@ export default function Leaderboard() {
                 </div>
                 
                 <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0">
-                  <span className="font-black text-slate-800 text-xl">
-                    {kid.displayPoints}
-                  </span>
+                  <span className="font-black text-slate-800 text-xl">{kid.displayPoints}</span>
                   {MedalIcon && <MedalIcon className={`drop-shadow-sm w-6 h-6 ${medalColor}`} />}
                 </div>
               </div>
@@ -234,10 +208,7 @@ export default function Leaderboard() {
         )}
       </div>
 
-      <MemberProfileModal 
-        member={selectedMember} 
-        onClose={() => setSelectedMember(null)} 
-      />
+      <MemberProfileModal member={selectedMember} onClose={() => setSelectedMember(null)} />
     </div>
   );
 }

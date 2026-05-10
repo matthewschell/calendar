@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
@@ -9,6 +9,9 @@ import DayViewModal from './DayViewModal';
 export default function CalendarGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
   
+  // FIX: Track the real today string to force re-renders at midnight
+  const [realTodayStr, setRealTodayStr] = useState(new Date().toDateString());
+
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isDayViewOpen, setIsDayViewOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -18,11 +21,26 @@ export default function CalendarGrid() {
   const { events, loading: eventsLoading, deleteEvent, deleteEventGroup } = useEvents();
   const { members, loading: membersLoading } = useFamilyMembers();
 
+  // Midnight tick observer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = new Date().toDateString();
+      if (current !== realTodayStr) {
+        setRealTodayStr(current);
+        // If the user hasn't explicitly navigated away, auto-flip to the new month if the day crosses a month boundary
+        const now = new Date();
+        if (currentDate.getMonth() === now.getMonth() - 1 || currentDate.getMonth() === now.getMonth() + 11) {
+            setCurrentDate(now);
+        }
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [realTodayStr, currentDate]);
+
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const startingDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
   
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const todayStr = new Date().toDateString();
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -104,7 +122,9 @@ export default function CalendarGrid() {
             const day = i + 1;
             const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dateString = dateObj.toDateString();
-            const isToday = dateString === todayStr;
+            
+            // FIX: Rely on the dynamically updating realTodayStr
+            const isToday = dateString === realTodayStr;
 
             const dayEvents = getEventsForDate(dateString);
 
