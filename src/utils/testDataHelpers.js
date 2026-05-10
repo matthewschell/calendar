@@ -1,8 +1,7 @@
-// src/utils/testDataHelpers.js
 import { collection, getDocs, query, where, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-export const injectMarchAprilData = async () => {
+export const injectHistoricalData = async () => {
   try {
     // 1. Fetch only the kids
     const membersSnap = await getDocs(collection(db, 'familyMembers'));
@@ -18,11 +17,15 @@ export const injectMarchAprilData = async () => {
 
     const ops = [];
     
-    // JS Dates are 0-indexed for months. 2 = March, 3 = April.
-    const start = new Date(2026, 2, 1); 
-    const end = new Date(2026, 3, 30); 
+    // Inject data dynamically for the past 60 days ending today, 
+    // so it shows up immediately in the history panel.
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date();
+    start.setDate(end.getDate() - 60);
+    start.setHours(0, 0, 0, 0);
 
-    // 2. Loop through every day in March and April
+    // 2. Loop through every day in the range
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       kids.forEach(kidId => {
         // ~75% chance a kid did chores on any given day
@@ -53,7 +56,7 @@ export const injectMarchAprilData = async () => {
       await batch.commit();
     }
 
-    alert(`Successfully injected ${ops.length} test completions for March and April 2026!`);
+    alert(`Successfully injected ${ops.length} test completions for the past 60 days!`);
   } catch (error) {
     console.error("Error injecting test data:", error);
     alert("Failed to inject test data.");

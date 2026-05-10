@@ -1,4 +1,3 @@
-// src/components/dashboard/MemberProfileModal.jsx
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Image as ImageIcon, Wallet, Star, Loader2, UserCircle, History, DollarSign, Volume2, ChevronLeft, ChevronRight, BarChart3, LineChart } from 'lucide-react';
@@ -20,17 +19,15 @@ export default function MemberProfileModal({ member, onClose }) {
   const [weeklyPoints, setWeeklyPoints] = useState(0);
   
   // Chart Controls
-  const [chartType, setChartType] = useState('bar'); // 'bar' or 'line'
-  const [historyTimeframe, setHistoryTimeframe] = useState('weekly'); // 'weekly' or 'monthly'
+  const [chartType, setChartType] = useState('bar');
+  const [historyTimeframe, setHistoryTimeframe] = useState('weekly');
   
-  // The reference date used to calculate the start/end of the viewed range
   const [referenceDate, setReferenceDate] = useState(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
   });
 
-  // Fetch Admin Libraries & Config
   useEffect(() => {
     if (!isEditing) return;
     const fetchLibraries = async () => {
@@ -50,17 +47,14 @@ export default function MemberProfileModal({ member, onClose }) {
     return () => unsub();
   }, []);
 
-  // Fetch History for the Selected Range
   useEffect(() => {
     if (!member) return;
 
-    // The actual "Today" and actual "Current Week" for top summary stats
     const actualToday = new Date();
     const actualStartOfWeek = new Date(actualToday);
     actualStartOfWeek.setDate(actualToday.getDate() - actualToday.getDay());
     actualStartOfWeek.setHours(0, 0, 0, 0);
 
-    // Calculate the start and end of the currently viewed chart range
     let startOfRange = new Date(referenceDate);
     let endOfRange = new Date(referenceDate);
 
@@ -75,24 +69,15 @@ export default function MemberProfileModal({ member, onClose }) {
     startOfRange.setHours(0, 0, 0, 0);
     endOfRange.setHours(23, 59, 59, 999);
 
-    // Query bounds to capture both the summary week and the viewed chart week/month
-    const minDate = startOfRange < actualStartOfWeek ? startOfRange : actualStartOfWeek;
-    const maxDate = endOfRange > actualToday ? endOfRange : actualToday;
-    maxDate.setHours(23, 59, 59, 999);
-
-    const q = query(
-      collection(db, 'completions'), 
-      where('completedBy', '==', member.id), 
-      where('timestamp', '>=', minDate), 
-      where('timestamp', '<=', maxDate)
-    );
+    // Query all completions by this member, and filter by date in memory
+    // This avoids needing a composite index in Firestore!
+    const q = query(collection(db, 'completions'), where('completedBy', '==', member.id));
     
     const unsub = onSnapshot(q, (snapshot) => {
       let currentWeekPts = 0;
       const dailyMap = {};
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-      // Initialize map for the selected timeframe
       const daysInRange = historyTimeframe === 'weekly' ? 7 : endOfRange.getDate();
       
       for (let i = 0; i < daysInRange; i++) {
@@ -109,12 +94,10 @@ export default function MemberProfileModal({ member, onClose }) {
         const date = data.timestamp?.toDate();
         if (!date) return;
 
-        // Tally actual current week points (Sunday to Saturday of this week)
         if (date >= actualStartOfWeek && date <= actualToday) {
           currentWeekPts += (Number(data.points) || 0);
         }
 
-        // Tally points for the chart if the completion falls within the viewed range
         if (date >= startOfRange && date <= endOfRange) {
           const dateString = date.toDateString();
           if (dailyMap[dateString]) {
@@ -123,11 +106,12 @@ export default function MemberProfileModal({ member, onClose }) {
         }
       });
 
-      // Sort ensuring date order
       const chartArray = Object.values(dailyMap).sort((a, b) => a.dateObj - b.dateObj);
 
       setWeeklyPoints(currentWeekPts);
       setHistoryData(chartArray);
+    }, (error) => {
+      console.error("Error fetching history:", error);
     });
 
     return () => unsub();
@@ -137,15 +121,11 @@ export default function MemberProfileModal({ member, onClose }) {
 
   const payRate = member.payRate || 0;
   const weeklyEarned = (weeklyPoints * payRate).toFixed(2);
-  const fallbackAvatar = `https://ui-avatars.com/api/?name=${member.name}&background=cbd5e1&color=fff&size=128`;
-  
-  // We use the same max points for both charts now, adding a minimum ceiling of 10 so low days don't look huge
   const maxPoints = Math.max(...historyData.map(d => d.pts), 10);
 
-  // Build SVG Polyline points for the daily point values
   const linePoints = historyData.map((d, i) => {
     const x = (i / (historyData.length - 1 || 1)) * 100;
-    const y = 95 - ((d.pts / maxPoints) * 90); // Scale between 5% and 95% so the line doesn't clip the top/bottom
+    const y = 95 - ((d.pts / maxPoints) * 90);
     return `${x},${y}`;
   }).join(' ');
 
@@ -189,7 +169,6 @@ export default function MemberProfileModal({ member, onClose }) {
     });
   };
 
-  // Generate the formatted label for the current viewed range
   let rangeLabel = '';
   if (historyTimeframe === 'weekly') {
     const wStart = new Date(referenceDate);
@@ -201,11 +180,10 @@ export default function MemberProfileModal({ member, onClose }) {
     rangeLabel = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
-  // Helper to determine if a label should be shown in monthly view to prevent crowding
   const shouldShowLabel = (index, total) => {
     if (historyTimeframe === 'weekly') return true;
-    if (index === 0 || index === total - 1) return true; // Always show first and last
-    return index % 5 === 0; // Show every 5th day
+    if (index === 0 || index === total - 1) return true;
+    return index % 5 === 0;
   };
 
   return createPortal(

@@ -1,15 +1,14 @@
-// src/components/admin/SystemToolsTab.jsx
 import { useState } from 'react';
 import { Database, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
-import { injectMarchAprilData, removeTestData } from '../../utils/testDataHelpers';
+import { injectHistoricalData, removeTestData } from '../../utils/testDataHelpers';
 
 export default function SystemToolsTab() {
   const [loading, setLoading] = useState(false);
 
   const handleInject = async () => {
-    if (!window.confirm("This will inject random chore completions for March and April 2026. Proceed?")) return;
+    if (!window.confirm("This will inject random chore completions for the past 60 days. Proceed?")) return;
     setLoading(true);
-    await injectMarchAprilData();
+    await injectHistoricalData();
     setLoading(false);
   };
 
@@ -34,14 +33,14 @@ export default function SystemToolsTab() {
             <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Inject Historical Test Data
           </h4>
           <p className="text-sm text-slate-500 mb-4">
-            Populate the database with random chore completions for March and April 2026. This allows you to test the historical bar and line charts in the kids' profiles without manually entering months of data.
+            Populate the database with random chore completions for the past 60 days. This allows you to test the historical bar and line charts in the kids' profiles without manually entering months of data.
           </p>
           <button 
             onClick={handleInject}
             disabled={loading}
             className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold hover:bg-emerald-200 transition-colors disabled:opacity-50 shadow-sm"
           >
-            {loading ? 'Processing...' : 'Inject March & April Data'}
+            {loading ? 'Processing...' : 'Inject Past 60 Days Data'}
           </button>
         </div>
 
