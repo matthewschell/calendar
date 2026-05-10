@@ -1,4 +1,3 @@
-// src/components/dashboard/Leaderboard.jsx
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, AlertCircle, Clock } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
@@ -19,11 +18,20 @@ export default function Leaderboard() {
   
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
-  
-  // State for our new Profile Modal
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // Fetch config once
+  // FIX: Track the current day as a state variable and check it every minute.
+  // This guarantees the component naturally re-renders if the app is left open across midnight.
+  const [todayStr, setTodayStr] = useState(new Date().toDateString());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = new Date().toDateString();
+      if (current !== todayStr) setTodayStr(current);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [todayStr]);
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
       if (docSnap.exists()) {
@@ -33,7 +41,6 @@ export default function Leaderboard() {
     return () => unsub();
   }, []);
 
-  // Ensure timeframe is valid based on config
   useEffect(() => {
     if (!widgetConfig.enabledTimeframes.includes(timeframe)) {
       setTimeframe(widgetConfig.defaultTimeframe || 'daily');
@@ -67,20 +74,32 @@ export default function Leaderboard() {
     setScoresLoading(true);
     const now = new Date();
     let startDate = new Date();
+    let endDate = new Date();
     
     if (timeframe === 'daily') {
       startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
     } else if (timeframe === 'weekly') {
-      // ALIGNED: Set start date strictly to Sunday of the current week
       startDate.setDate(now.getDate() - now.getDay());
       startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
     } else if (timeframe === 'monthly') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (timeframe === 'yearly') {
       startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    const q = query(collection(db, 'completions'), where('timestamp', '>=', startDate));
+    // FIX: Add upper limit (`<= endDate`) so future timestamps never leak into the daily view
+    const q = query(
+      collection(db, 'completions'), 
+      where('timestamp', '>=', startDate),
+      where('timestamp', '<=', endDate)
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const calculatedScores = {};
       snapshot.forEach(doc => {
@@ -94,7 +113,7 @@ export default function Leaderboard() {
     });
 
     return () => unsubscribe();
-  }, [timeframe]);
+  }, [timeframe, todayStr]); // FIX: Dependency on todayStr ensures query recalculates at midnight
 
   if (membersLoading) {
     return (
@@ -219,7 +238,6 @@ export default function Leaderboard() {
         member={selectedMember} 
         onClose={() => setSelectedMember(null)} 
       />
-
     </div>
   );
 }

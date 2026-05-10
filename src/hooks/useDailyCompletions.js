@@ -5,8 +5,17 @@ import { db } from '../config/firebase';
 export function useDailyCompletions() {
   const [completions, setCompletions] = useState({});
   const [loading, setLoading] = useState(true);
+  
+  // FIX: Track today string in state to force midnight queries to update natively
+  const [todayStr, setTodayStr] = useState(new Date().toDateString());
 
-  const todayStr = new Date().toDateString();
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = new Date().toDateString();
+      if (current !== todayStr) setTodayStr(current);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [todayStr]);
 
   useEffect(() => {
     const q = query(collection(db, 'completions'), where('date', '==', todayStr));
@@ -22,13 +31,16 @@ export function useDailyCompletions() {
   }, [todayStr]);
 
   const toggleCompletion = async (chore, memberId, isCurrentlyDone) => {
-    const compId = `${chore.id}-${todayStr}`;
+    // FIX: Always capture the exact date at the moment of the click, 
+    // circumventing any stale state closures entirely
+    const currentTodayStr = new Date().toDateString();
+    
+    const compId = `${chore.id}-${currentTodayStr}`;
     const compRef = doc(db, 'completions', compId);
     const memberRef = doc(db, 'familyMembers', memberId);
     
     const batch = writeBatch(db);
 
-    // FORCE the points to be a strict mathematical number before Firestore sees it
     const numericPoints = Number(chore.points) || 0;
 
     if (isCurrentlyDone) {
@@ -37,7 +49,7 @@ export function useDailyCompletions() {
     } else {
       batch.set(compRef, {
         choreId: chore.id,
-        date: todayStr,
+        date: currentTodayStr,
         completedBy: memberId,
         points: numericPoints,
         timestamp: new Date()
