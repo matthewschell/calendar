@@ -1,4 +1,3 @@
-// src/components/admin/FamilyMembersTab.jsx
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -58,7 +57,7 @@ export default function FamilyMembersTab() {
       const memberData = {
         name: e.target.name.value,
         color: e.target.color.value,
-        participatesInChores: e.target.role.value === 'kid',
+        participatesInChores: e.target.participatesInChores.value === 'true',
         payRate: Number(e.target.payRate.value) || 0,
         pin: e.target.pin.value || ''
       };
@@ -184,14 +183,14 @@ export default function FamilyMembersTab() {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Chores?</label>
               <select 
-                name="role" 
-                defaultValue={currentMember?.participatesInChores ? 'kid' : 'parent'} 
+                name="participatesInChores" 
+                defaultValue={currentMember?.participatesInChores ? 'true' : 'false'} 
                 className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
               >
-                <option value="kid">Kid</option>
-                <option value="parent">Parent</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
               </select>
             </div>
             <div>
@@ -280,7 +279,7 @@ export default function FamilyMembersTab() {
                 <div>
                   <div className="font-bold text-slate-800">{member.name}</div>
                   <div className="text-xs font-medium text-slate-500 flex gap-2">
-                    <span className="uppercase tracking-wider">{member.participatesInChores ? 'Kid' : 'Parent'}</span>
+                    <span className="uppercase tracking-wider">{member.participatesInChores ? 'Participant' : 'Non-Participant'}</span>
                     <span>&bull;</span>
                     <span>Rate: ${member.payRate?.toFixed(2) || '0.00'}</span>
                   </div>
@@ -311,7 +310,7 @@ export default function FamilyMembersTab() {
           <ImageIcon className="w-5 h-5 text-indigo-500" />
           <h3 className="font-bold text-slate-800">Default Avatar Library</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Images uploaded here will be available for kids to choose from in their profile modal.</p>
+        <p className="text-xs text-slate-500 mb-4">Images uploaded here will be available for members to choose from in their profile modal.</p>
         
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
           {avatarLibrary.map((url, idx) => (
@@ -340,7 +339,7 @@ export default function FamilyMembersTab() {
           <Music className="w-5 h-5 text-indigo-500" />
           <h3 className="font-bold text-slate-800">Signature Sound Library</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Audio files (MP3/WAV) uploaded here can be selected by kids as their chore completion sound.</p>
+        <p className="text-xs text-slate-500 mb-4">Audio files (MP3/WAV) uploaded here can be selected by members as their chore completion sound.</p>
         
         <div className="space-y-2 mb-4">
           {soundLibrary.map((sound, idx) => (
