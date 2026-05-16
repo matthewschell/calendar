@@ -81,12 +81,12 @@
     const Check = ({ size = 24, color = "currentColor" }) => (html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke=${color} strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`);
     
     const DEFAULT_MEMBERS = [
-      { id: 'dad', name: 'Dad', color: '#3B82F6', isKid: false },
-      { id: 'mom', name: 'Mom', color: '#EC4899', isKid: false },
-      { id: 'madison', name: 'Madison', color: '#8B5CF6', isKid: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
-      { id: 'mason', name: 'Mason', color: '#10B981', isKid: true, age: 11, signatureSound: 'level-up' },
-      { id: 'hudson', name: 'Hudson', color: '#F59E0B', isKid: true, age: 7, signatureSound: 'arcade-coin' },
-      { id: 'hunter', name: 'Hunter', color: '#EF4444', isKid: true, age: 5, signatureSound: 'victory-fanfare' }
+      { id: 'dad', name: 'Dad', color: '#3B82F6', participatesInChores: false },
+      { id: 'mom', name: 'Mom', color: '#EC4899', participatesInChores: false },
+      { id: 'madison', name: 'Madison', color: '#8B5CF6', participatesInChores: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
+      { id: 'mason', name: 'Mason', color: '#10B981', participatesInChores: true, age: 11, signatureSound: 'level-up' },
+      { id: 'hudson', name: 'Hudson', color: '#F59E0B', participatesInChores: true, age: 7, signatureSound: 'arcade-coin' },
+      { id: 'hunter', name: 'Hunter', color: '#EF4444', participatesInChores: true, age: 5, signatureSound: 'victory-fanfare' }
     ];
     
     const DEFAULT_CHORES = [
@@ -630,7 +630,7 @@
           const now = new Date();
           now.setHours(0, 0, 0, 0);
           const todayStr = now.toDateString();
-          const kids = curMembers.filter(m => m.isKid);
+          const kids = curMembers.filter(m => m.participatesInChores);
 
           let latestArchiveStr = null;
           if (curHist.length > 0) {
@@ -1171,7 +1171,7 @@
       })();
       const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
       const today = new Date().toDateString();
-      const kids = familyMembers.filter(m => m.isKid).sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+      const kids = familyMembers.filter(m => m.participatesInChores).sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
       
       return (
         html`<${React.Fragment}>
@@ -1491,7 +1491,7 @@
                   // Group assigned chores by kid; collect bonus chores
                   const assignedChores = todayChores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
                   const bonusChores   = todayChores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
-                  const presentKids   = familyMembers.filter(m => m.isKid && isHereToday(m));
+                  const presentKids   = familyMembers.filter(m => m.participatesInChores && isHereToday(m));
 
                   return (
                     html`<${React.Fragment}>
@@ -1803,7 +1803,7 @@
                           </div>
                           <div style=${{ minWidth: 0 }}>
                             <div style=${{ fontSize: '16px', fontWeight: '600', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${member.name}</div>
-                            <div style=${{ fontSize: '12px', color: '#6b7280' }}>${member.isKid ? 'Kid' : 'Adult'}</div>
+                            <div style=${{ fontSize: '12px', color: '#6b7280' }}>${member.participatesInChores ? 'Kid' : 'Adult'}</div>
                           </div>
                         </div>
                         <div style=${{ display: 'flex', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
@@ -1840,7 +1840,7 @@
                         const avatarFile = document.getElementById('newMemberAvatar').files[0];
                         if (!name) return;
                         const btn = document.getElementById('addMemberBtn');
-                        const newMemberData = { name, color, isKid: type === 'kid', schedule: { type: 'always' }, signatureSound: soundId };
+                        const newMemberData = { name, color, participatesInChores: type === 'kid', schedule: { type: 'always' }, signatureSound: soundId };
                         if (avatarFile) {
                           btn.textContent = 'Uploading...'; btn.disabled = true;
                           try {
@@ -1939,7 +1939,7 @@
                             <thead style=${{ position: 'sticky', top: 0, background: '#f1f5f9', zIndex: 1 }}>
                               <tr>
                                 <th style=${{ padding: '10px 8px', borderBottom: '2px solid #cbd5e1', textAlign: 'left', color: '#475569' }}>Date</th>
-                                ${familyMembers.filter(m => m.isKid).map(kid => (
+                                ${familyMembers.filter(m => m.participatesInChores).map(kid => (
                                   html`<th key=${kid.id} style=${{ padding: '10px 8px', borderBottom: '2px solid #cbd5e1', color: kid.color }}>${kid.name}</th>`
                                 ))}
                               </tr>
@@ -1957,7 +1957,7 @@
                                     <td style=${{ padding: '10px 8px', textAlign: 'left', fontWeight: isToday ? '700' : '500', color: '#334155' }}>
                                       ${dayStr} ${isToday && '(Today)'}
                                     </td>
-                                    ${familyMembers.filter(m => m.isKid).map(kid => {
+                                    ${familyMembers.filter(m => m.participatesInChores).map(kid => {
                                       const pts = getPointsForKidOnDate(kid.id, d);
                                       const is100 = pts === 100;
                                       return (
@@ -1977,7 +1977,7 @@
                   })()}
                   <div style=${{ marginBottom: '15px' }}>
                     ${(() => {
-                      const kids = familyMembers.filter(m => m.isKid);
+                      const kids = familyMembers.filter(m => m.participatesInChores);
                       const bonusChores = chores.filter(c => (!c.assignedTo || c.assignedTo === 'unassigned') && !c.isArchived).sort((a, b) => a.name.localeCompare(b.name));
                       const renderChoreRow = (chore) => (
                         html`<div key=${chore.id} style=${{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '10px', marginBottom: '8px', border: '2px solid #e5e7eb', minWidth: 0 }}>
@@ -2177,7 +2177,7 @@
                         const allChores = cal.choresList || chores;
                         const members = cal.familyMembers || familyMembers;
                         const bonus = cal.completionBonus !== undefined ? cal.completionBonus : completionBonus;
-                        const kids = members.filter(m => m.isKid);
+                        const kids = members.filter(m => m.participatesInChores);
 
                         // 1. Merge everything into a single flat object to absolutely guarantee no duplicates
                         const allUniqueCompletions = {};
@@ -2637,7 +2637,7 @@
                   <label style=${{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>Colour</label>
                   <input id="editColor" type="color" defaultValue=${editingMember.color} style=${{ width:'100%', height:'40px', marginBottom:'12px', borderRadius: '8px', border: '2px solid #e5e7eb', cursor: 'pointer' }} />
 
-                  ${editingMember.isKid && (html`<${React.Fragment}>
+                  ${editingMember.participatesInChores && (html`<${React.Fragment}>
                     <label style=${{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>💵 Pay Rate (per point)</label>
                     <div style=${{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                       <span style=${{ fontSize: '16px', color: '#6b7280', fontWeight: 'bold' }}>$</span>
@@ -2653,8 +2653,8 @@
                   <button id="editMemberSaveBtn" onClick=${async ()=>{
                      const newName = document.getElementById('editName').value;
                      const newColor = document.getElementById('editColor').value;
-                     const newSound = editingMember.isKid ? document.getElementById('editMemberSound').value : editingMember.signatureSound;
-                     const newPayRate = editingMember.isKid ? parseFloat(document.getElementById('editPayRate').value) : null;
+                     const newSound = editingMember.participatesInChores ? document.getElementById('editMemberSound').value : editingMember.signatureSound;
+                     const newPayRate = editingMember.participatesInChores ? parseFloat(document.getElementById('editPayRate').value) : null;
                      const avatarFile = document.getElementById('editMemberAvatar').files[0];
                      const btn = document.getElementById('editMemberSaveBtn');
                      // Always read the true original from the live familyMembers array
@@ -2869,7 +2869,7 @@
             const byMember = {};
             
             // Initialize with all kids so we can add chores even if they had 0 points that day
-            familyMembers.filter(m => m.isKid).forEach(kid => {
+            familyMembers.filter(m => m.participatesInChores).forEach(kid => {
               byMember[kid.id] = {
                 name: kid.name,
                 color: kid.color,
@@ -3116,7 +3116,7 @@
                <div style=${{ background:'white', padding:'30px', borderRadius:'20px', width:'400px' }}>
                   <h3>Who did this?</h3>
                   <div style=${{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-                     ${familyMembers.filter(m=>m.isKid).map(m=>{
+                     ${familyMembers.filter(m=>m.participatesInChores).map(m=>{
                         const here = isHereToday(m);
                         return (
                         html`<button key=${m.id} disabled=${!here} onClick=${()=>{

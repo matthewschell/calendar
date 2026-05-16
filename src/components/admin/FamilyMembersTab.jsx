@@ -1,9 +1,10 @@
 // src/components/admin/FamilyMembersTab.jsx
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
 import { Edit2, Trash2, Plus, X, Loader2, Image as ImageIcon, Music, PlayCircle } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompression'; 
+import { uploadToCloudflare } from '../../utils/cloudflareUploader';
 
 export default function FamilyMembersTab() {
   const [members, setMembers] = useState([]);
@@ -21,15 +22,14 @@ export default function FamilyMembersTab() {
     const unsub = onSnapshot(collection(db, 'familyMembers'), (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMembers(membersData.sort((a, b) => {
-        if (a.isKid === b.isKid) return a.name.localeCompare(b.name);
-        return a.isKid ? 1 : -1;
+        if (a.participatesInChores === b.participatesInChores) return a.name.localeCompare(b.name);
+        return a.participatesInChores ? 1 : -1;
       }));
       setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // Listen to the shared Avatar Library
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'avatars'), (docSnap) => {
       if (docSnap.exists()) {
@@ -41,7 +41,6 @@ export default function FamilyMembersTab() {
     return () => unsub();
   }, []);
 
-  // Listen to the shared Sound Library
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'sounds'), (docSnap) => {
       if (docSnap.exists()) {
@@ -59,7 +58,7 @@ export default function FamilyMembersTab() {
       const memberData = {
         name: e.target.name.value,
         color: e.target.color.value,
-        isKid: e.target.role.value === 'kid',
+        participatesInChores: e.target.role.value === 'kid',
         payRate: Number(e.target.payRate.value) || 0,
         pin: e.target.pin.value || ''
       };
@@ -67,12 +66,7 @@ export default function FamilyMembersTab() {
       if (currentMember?.id) {
         await updateDoc(doc(db, 'familyMembers', currentMember.id), memberData);
       } else {
-        await addDoc(collection(db, 'familyMembers'), {
-          ...memberData,
-          points: 0,
-          avatar: '',
-          signatureSound: ''
-        });
+        await addDoc(collection(db, 'familyMembers'), { ...memberData, points: 0, avatar: '', signatureSound: '' });
       }
       setIsEditing(false);
       setCurrentMember(null);
@@ -90,23 +84,24 @@ export default function FamilyMembersTab() {
 
   // Avatar Library Handlers
   const handleUploadToLibrary = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target?.files?.[0];
+    const inputElement = e.target;
+    
     if (!file) return;
-
+    
     setUploadingAvatar(true);
     try {
-      const fileRef = ref(storage, `avatars/library_${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      const optimizedBlob = await compressImage(file, 400, 400, 0.8);
       
-      await setDoc(doc(db, 'settings', 'avatars'), {
-        urls: arrayUnion(url)
-      }, { merge: true });
-
+      const safeName = `library_${Date.now()}_${file.name.replace(/\.[^/.]+$/, ".jpg")}`;
+      const url = await uploadToCloudflare(optimizedBlob, safeName);
+      
+      await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayUnion(url) }, { merge: true });
     } catch (error) {
       console.error("Error uploading to library:", error);
-      alert("Failed to upload default avatar.");
+      alert("Failed to upload default avatar to Cloudflare.");
     } finally {
+      if (inputElement) inputElement.value = '';
       setUploadingAvatar(false);
     }
   };
@@ -114,9 +109,7 @@ export default function FamilyMembersTab() {
   const handleDeleteFromLibrary = async (url) => {
     if (!window.confirm("Remove this avatar from the default choices?")) return;
     try {
-      await setDoc(doc(db, 'settings', 'avatars'), {
-        urls: arrayRemove(url)
-      }, { merge: true });
+      await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayRemove(url) }, { merge: true });
     } catch (error) {
       console.error("Error removing avatar:", error);
     }
@@ -124,26 +117,28 @@ export default function FamilyMembersTab() {
 
   // Sound Library Handlers
   const handleUploadSound = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target?.files?.[0];
+    const inputElement = e.target;
     if (!file) return;
 
     const soundName = window.prompt("Give this signature sound a short name (e.g., 'Magic Wand'):");
-    if (!soundName) return;
+    if (!soundName) {
+      if (inputElement) inputElement.value = '';
+      return;
+    }
 
     setUploadingSound(true);
     try {
-      const fileRef = ref(storage, `sounds/library_${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      // Audio goes up raw, no compression needed
+      const safeName = `sound_${Date.now()}_${file.name}`;
+      const url = await uploadToCloudflare(file, safeName);
       
-      await setDoc(doc(db, 'settings', 'sounds'), {
-        items: arrayUnion({ name: soundName, url })
-      }, { merge: true });
-
+      await setDoc(doc(db, 'settings', 'sounds'), { items: arrayUnion({ name: soundName, url }) }, { merge: true });
     } catch (error) {
       console.error("Error uploading sound:", error);
-      alert("Failed to upload signature sound.");
+      alert("Failed to upload signature sound to Cloudflare.");
     } finally {
+      if (inputElement) inputElement.value = '';
       setUploadingSound(false);
     }
   };
@@ -151,9 +146,7 @@ export default function FamilyMembersTab() {
   const handleDeleteSound = async (soundObj) => {
     if (!window.confirm(`Remove "${soundObj.name}" from the sound choices?`)) return;
     try {
-      await setDoc(doc(db, 'settings', 'sounds'), {
-        items: arrayRemove(soundObj)
-      }, { merge: true });
+      await setDoc(doc(db, 'settings', 'sounds'), { items: arrayRemove(soundObj) }, { merge: true });
     } catch (error) {
       console.error("Error removing sound:", error);
     }
@@ -185,16 +178,16 @@ export default function FamilyMembersTab() {
               name="name" 
               defaultValue={currentMember?.name} 
               required 
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
+              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors" 
             />
           </div>
-
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
               <select 
                 name="role" 
-                defaultValue={currentMember?.isKid ? 'kid' : 'parent'}
+                defaultValue={currentMember?.participatesInChores ? 'kid' : 'parent'} 
                 className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
               >
                 <option value="kid">Kid</option>
@@ -207,7 +200,7 @@ export default function FamilyMembersTab() {
                 type="color" 
                 name="color" 
                 defaultValue={currentMember?.color || '#6366f1'} 
-                className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer"
+                className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer" 
               />
             </div>
           </div>
@@ -220,18 +213,18 @@ export default function FamilyMembersTab() {
                 step="0.01" 
                 name="payRate" 
                 defaultValue={currentMember?.payRate || 0} 
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" 
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Security PIN (Optional)</label>
               <input 
                 type="text" 
-                maxLength="4"
+                maxLength="4" 
                 name="pin" 
                 defaultValue={currentMember?.pin || ''} 
-                placeholder="e.g. 1234"
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
+                placeholder="e.g. 1234" 
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" 
               />
             </div>
           </div>
@@ -239,13 +232,13 @@ export default function FamilyMembersTab() {
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
             <button 
               type="button" 
-              onClick={() => setIsEditing(false)}
+              onClick={() => setIsEditing(false)} 
               className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors"
             >
               Cancel
             </button>
             <button 
-              type="submit"
+              type="submit" 
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-sm"
             >
               Save Member
@@ -270,7 +263,6 @@ export default function FamilyMembersTab() {
             <Plus className="w-4 h-4" /> Add Member
           </button>
         </div>
-
         <div className="grid gap-3">
           {members.map(member => (
             <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors">
@@ -288,13 +280,12 @@ export default function FamilyMembersTab() {
                 <div>
                   <div className="font-bold text-slate-800">{member.name}</div>
                   <div className="text-xs font-medium text-slate-500 flex gap-2">
-                    <span className="uppercase tracking-wider">{member.isKid ? 'Kid' : 'Parent'}</span>
+                    <span className="uppercase tracking-wider">{member.participatesInChores ? 'Kid' : 'Parent'}</span>
                     <span>&bull;</span>
                     <span>Rate: ${member.payRate?.toFixed(2) || '0.00'}</span>
                   </div>
                 </div>
               </div>
-              
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setCurrentMember(member); setIsEditing(true); }}
@@ -335,7 +326,6 @@ export default function FamilyMembersTab() {
               </button>
             </div>
           ))}
-          
           <label className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 flex flex-col items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-100 hover:border-indigo-400 transition-colors shadow-sm">
             {uploadingAvatar ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
             <span className="text-[10px] font-bold uppercase tracking-wider mt-1">{uploadingAvatar ? '...' : 'Add'}</span>

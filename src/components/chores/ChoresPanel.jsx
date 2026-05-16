@@ -5,6 +5,7 @@ import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 import { useDailyCompletions } from '../../hooks/useDailyCompletions';
 import { useCelebration } from '../../hooks/useCelebration';
+import { useCustody } from '../../hooks/useCustody';
 
 export default function ChoresPanel() {
   const { chores, loading: choresLoading } = useChores();
@@ -12,6 +13,7 @@ export default function ChoresPanel() {
   const { completions, loading: compsLoading, toggleCompletion } = useDailyCompletions();
   
   const { triggerCelebration } = useCelebration();
+  const { isHereToday } = useCustody();
   
   const [claimingChore, setClaimingChore] = useState(null);
   const [celebratingKid, setCelebratingKid] = useState(null);
@@ -24,7 +26,9 @@ export default function ChoresPanel() {
     );
   }
 
-  const kids = members.filter(m => m.isKid);
+  // MATH FILTER: Completely strip out any kids who are scheduled as "Away" today
+  const kids = members.filter(m => m.participatesInChores && isHereToday(m));
+  
   const assignedChores = chores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
   const bonusChores = chores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
 
@@ -41,30 +45,22 @@ export default function ChoresPanel() {
       return;
     }
 
-    // Trigger atomic database update
     toggleCompletion(chore, chore.assignedTo, isDone);
 
-    // If we are CHECKING a chore (it was not done)...
     if (!isDone && chore.assignedTo) {
       const kidChores = assignedChores.filter(c => c.assignedTo === chore.assignedTo);
-      // Check if every other chore for this kid is already in the 'completions' state
       const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
       
       if (allDone && kidChores.length > 0) {
-        // 1. Fire the custom Celebration Engine
         triggerCelebration();
         
-        // 2. Find the kid and trigger the Mission Complete Modal!
         const member = members.find(m => m.id === chore.assignedTo);
         if (member) {
-          // FIX: Manually inject the final chore's points into the snapshot 
-          // so the modal is instantly mathematically accurate without waiting for the database
           setCelebratingKid({
             ...member,
             points: Number(member.points || 0) + Number(chore.points || 0)
           });
           
-          // Auto-dismiss after 15 seconds
           setTimeout(() => setCelebratingKid(null), 15000);
         }
       }
@@ -73,7 +69,6 @@ export default function ChoresPanel() {
 
   const handleClaimBonus = (kidId) => {
     toggleCompletion(claimingChore, kidId, false);
-    // Small pop for claiming a bonus
     triggerCelebration({ 
       layers: [{ type: 'fireworks', colors: ['#FFD700', '#FFA500'], scale: 1, intensity: 0.5 }],
       duration: 2,

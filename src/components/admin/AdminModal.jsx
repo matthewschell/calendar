@@ -1,11 +1,12 @@
-// src/components/admin/AdminModal.jsx
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid, CalendarDays, Monitor } from 'lucide-react';
 import ThemeTab from './ThemeTab';
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
 import WidgetsTab from './WidgetsTab';
 import SystemToolsTab from './SystemToolsTab';
+import ScheduleManager from './ScheduleManager';
+import DeviceManagerTab from './DeviceManagerTab'; // NEW IMPORT
 
 const ADMIN_PIN = "8486";
 
@@ -69,17 +70,21 @@ export default function AdminModal({ isOpen, onClose }) {
         <div className="flex flex-1 overflow-hidden">
           <div className="w-64 bg-slate-50 border-r border-slate-100 p-4 flex flex-col gap-2 shrink-0">
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
+            <TabButton active={activeTab === 'custody'} onClick={() => setActiveTab('custody')} icon={<CalendarDays className="w-5 h-5" />} label="Custody & Schedule" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
             <TabButton active={activeTab === 'widgets'} onClick={() => setActiveTab('widgets')} icon={<LayoutGrid className="w-5 h-5" />} label="Dashboard Widgets" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
+            <TabButton active={activeTab === 'devices'} onClick={() => setActiveTab('devices')} icon={<Monitor className="w-5 h-5" />} label="Display & Devices" />
             <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Database className="w-5 h-5" />} label="System Tools" />
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
             {activeTab === 'members' && <FamilyMembersTab />}
+            {activeTab === 'custody' && <ScheduleManager />}
             {activeTab === 'chores' && <ChoresTab />}
             {activeTab === 'widgets' && <WidgetsTab />}
             {activeTab === 'theme' && <ThemeTab />}
+            {activeTab === 'devices' && <DeviceManagerTab />}
             {activeTab === 'system' && <SystemToolsTab />}
           </div>
         </div>

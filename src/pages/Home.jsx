@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// src/pages/Home.jsx
+import { useState, useEffect } from 'react';
 import MessageCentre from '../components/dashboard/MessageCentre';
 import DailyContent from '../components/dashboard/DailyContent';
 import Leaderboard from '../components/dashboard/Leaderboard';
@@ -10,6 +11,18 @@ import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../hooks/useTheme';
 export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false);
   const { theme } = useTheme();
+
+  // LOCAL OVERRIDE LISTENER
+  const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
+
+  useEffect(() => {
+    // This allows Home to react instantly when the ThemeTab slider moves
+    const handleOverrideChange = () => {
+      setLocalOverride(localStorage.getItem('bgPositionOverride'));
+    };
+    window.addEventListener('localBgOverrideChanged', handleOverrideChange);
+    return () => window.removeEventListener('localBgOverrideChanged', handleOverrideChange);
+  }, []);
 
   // Resolve active theme settings globally
   const activePreset = THEME_PRESETS.find(p => p.id === theme?.preset) || THEME_PRESETS[0];
@@ -31,6 +44,11 @@ export default function Home() {
   const panelRgba = `rgba(255, 255, 255, ${(theme?.panelOpacity ?? 90) / 100})`;
   const panelBlur = `${theme?.panelBlur ?? 8}px`;
 
+  // Apply effective positions (Local Override trumps global Firebase theme)
+  const localOverrideActive = localOverride !== null && localOverride !== '';
+  const effectiveDesktopPos = localOverrideActive ? localOverride : (theme?.bgPositionDesktop ?? 50);
+  const effectiveMobilePos = localOverrideActive ? localOverride : (theme?.bgPositionMobile ?? 50);
+
   return (
     <>
       {activeFont.google && <link href={`https://fonts.googleapis.com/css2?family=${activeFont.google}&display=swap`} rel="stylesheet" />}
@@ -41,8 +59,8 @@ export default function Home() {
           background-attachment: fixed;
           font-family: ${activeFont.css};
         }
-        @media (min-width: 768px) { body { background-position: center ${theme?.bgPositionDesktop ?? 50}%; } }
-        @media (max-width: 767px) { body { background-position: ${theme?.bgPositionMobile ?? 50}% center; } }
+        @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
+        @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
         
         /* Set CSS Glass Variables globally */
         :root {

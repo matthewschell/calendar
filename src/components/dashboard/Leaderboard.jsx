@@ -106,7 +106,7 @@ export default function Leaderboard() {
   if (membersLoading) return null; // Simplified for brevity
 
   const kids = members
-    .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
+    .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
     .map(kid => ({
       ...kid,
       displayPoints: timeframe === 'lifetime' ? (Number(kid.points) || 0) : (scores[kid.id] || 0)

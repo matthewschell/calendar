@@ -1,8 +1,7 @@
-// src/components/admin/WidgetsTab.jsx
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { MessageSquare, Lightbulb, Trophy, CloudSun, Save, MapPin, Sparkles, Search } from 'lucide-react';
+import { MessageSquare, Lightbulb, Trophy, CloudSun, Save, MapPin, Sparkles, Search, CheckCircle2 } from 'lucide-react';
 import MessageTab from './MessageTab';
 import FactsTab from './FactsTab';
 
@@ -13,7 +12,7 @@ function LeaderboardSettings() {
     autoRevertSeconds: 60
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -28,14 +27,16 @@ function LeaderboardSettings() {
   }, []);
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaveState('saving');
     try {
-      await setDoc(doc(db, 'settings', 'leaderboard'), config);
+      await setDoc(doc(db, 'settings', 'leaderboard'), config, { merge: true });
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
       console.error("Error saving leaderboard settings:", error);
-      alert("Failed to save settings.");
+      alert(`Failed to save settings: ${error.message}`);
+      setSaveState('idle');
     }
-    setSaving(false);
   };
 
   const toggleTimeframe = (tf) => {
@@ -101,8 +102,16 @@ function LeaderboardSettings() {
           />
         </div>
         <div className="pt-4 border-t border-slate-100 flex justify-end">
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
-            <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Settings'}
+          <button 
+            onClick={handleSave}
+            disabled={saveState !== 'idle'}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+              saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-80`}
+          >
+            {saveState === 'saving' && 'Saving...'}
+            {saveState === 'saved' && <><CheckCircle2 className="w-5 h-5" /> Saved!</>}
+            {saveState === 'idle' && <><Save className="w-5 h-5" /> Save Settings</>}
           </button>
         </div>
       </div>
@@ -120,7 +129,7 @@ function WeatherSettings() {
     kidFriendly: true
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
 
   const [citySearch, setCitySearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -169,14 +178,16 @@ function WeatherSettings() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaveState('saving');
     try {
-      await setDoc(doc(db, 'settings', 'weather'), config);
+      await setDoc(doc(db, 'settings', 'weather'), config, { merge: true });
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
       console.error("Error saving weather settings:", error);
-      alert("Failed to save settings.");
+      alert(`Failed to save settings: ${error.message}`);
+      setSaveState('idle');
     }
-    setSaving(false);
   };
 
   if (loading) return <div className="p-4 animate-pulse">Loading settings...</div>;
@@ -262,7 +273,7 @@ function WeatherSettings() {
           </div>
         </div>
 
-        {/* Kid Friendly Toggle - FIXED TAILWIND BRACKETS */}
+        {/* Kid Friendly Toggle */}
         <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
           <div>
             <h4 className="font-bold text-amber-900 flex items-center gap-2">
@@ -284,10 +295,14 @@ function WeatherSettings() {
         <div className="pt-4 border-t border-slate-100 flex justify-end">
           <button 
             onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            disabled={saveState !== 'idle'}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+              saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-80`}
           >
-            <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Settings'}
+            {saveState === 'saving' && 'Saving...'}
+            {saveState === 'saved' && <><CheckCircle2 className="w-5 h-5" /> Saved!</>}
+            {saveState === 'idle' && <><Save className="w-5 h-5" /> Save Settings</>}
           </button>
         </div>
       </div>

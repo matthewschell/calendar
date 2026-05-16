@@ -1,6 +1,6 @@
 # Schell Family Calendar - Codebase Snapshot
 
-*Generated on: 5/8/2026, 2:32:42 AM*
+*Generated on: 5/16/2026, 8:41:53 AM*
 
 ### `// .gitignore`
 
@@ -360,12 +360,12 @@ export default defineConfig([
     const Check = ({ size = 24, color = "currentColor" }) => (html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke=${color} strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`);
     
     const DEFAULT_MEMBERS = [
-      { id: 'dad', name: 'Dad', color: '#3B82F6', isKid: false },
-      { id: 'mom', name: 'Mom', color: '#EC4899', isKid: false },
-      { id: 'madison', name: 'Madison', color: '#8B5CF6', isKid: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
-      { id: 'mason', name: 'Mason', color: '#10B981', isKid: true, age: 11, signatureSound: 'level-up' },
-      { id: 'hudson', name: 'Hudson', color: '#F59E0B', isKid: true, age: 7, signatureSound: 'arcade-coin' },
-      { id: 'hunter', name: 'Hunter', color: '#EF4444', isKid: true, age: 5, signatureSound: 'victory-fanfare' }
+      { id: 'dad', name: 'Dad', color: '#3B82F6', participatesInChores: false },
+      { id: 'mom', name: 'Mom', color: '#EC4899', participatesInChores: false },
+      { id: 'madison', name: 'Madison', color: '#8B5CF6', participatesInChores: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
+      { id: 'mason', name: 'Mason', color: '#10B981', participatesInChores: true, age: 11, signatureSound: 'level-up' },
+      { id: 'hudson', name: 'Hudson', color: '#F59E0B', participatesInChores: true, age: 7, signatureSound: 'arcade-coin' },
+      { id: 'hunter', name: 'Hunter', color: '#EF4444', participatesInChores: true, age: 5, signatureSound: 'victory-fanfare' }
     ];
     
     const DEFAULT_CHORES = [
@@ -909,7 +909,7 @@ export default defineConfig([
           const now = new Date();
           now.setHours(0, 0, 0, 0);
           const todayStr = now.toDateString();
-          const kids = curMembers.filter(m => m.isKid);
+          const kids = curMembers.filter(m => m.participatesInChores);
 
           let latestArchiveStr = null;
           if (curHist.length > 0) {
@@ -1450,7 +1450,7 @@ export default defineConfig([
       })();
       const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
       const today = new Date().toDateString();
-      const kids = familyMembers.filter(m => m.isKid).sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+      const kids = familyMembers.filter(m => m.participatesInChores).sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
       
       return (
         html`<${React.Fragment}>
@@ -1770,7 +1770,7 @@ export default defineConfig([
                   // Group assigned chores by kid; collect bonus chores
                   const assignedChores = todayChores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
                   const bonusChores   = todayChores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
-                  const presentKids   = familyMembers.filter(m => m.isKid && isHereToday(m));
+                  const presentKids   = familyMembers.filter(m => m.participatesInChores && isHereToday(m));
 
                   return (
                     html`<${React.Fragment}>
@@ -2082,7 +2082,7 @@ export default defineConfig([
                           </div>
                           <div style=${{ minWidth: 0 }}>
                             <div style=${{ fontSize: '16px', fontWeight: '600', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${member.name}</div>
-                            <div style=${{ fontSize: '12px', color: '#6b7280' }}>${member.isKid ? 'Kid' : 'Adult'}</div>
+                            <div style=${{ fontSize: '12px', color: '#6b7280' }}>${member.participatesInChores ? 'Kid' : 'Adult'}</div>
                           </div>
                         </div>
                         <div style=${{ display: 'flex', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
@@ -2119,7 +2119,7 @@ export default defineConfig([
                         const avatarFile = document.getElementById('newMemberAvatar').files[0];
                         if (!name) return;
                         const btn = document.getElementById('addMemberBtn');
-                        const newMemberData = { name, color, isKid: type === 'kid', schedule: { type: 'always' }, signatureSound: soundId };
+                        const newMemberData = { name, color, participatesInChores: type === 'kid', schedule: { type: 'always' }, signatureSound: soundId };
                         if (avatarFile) {
                           btn.textContent = 'Uploading...'; btn.disabled = true;
                           try {
@@ -2218,7 +2218,7 @@ export default defineConfig([
                             <thead style=${{ position: 'sticky', top: 0, background: '#f1f5f9', zIndex: 1 }}>
                               <tr>
                                 <th style=${{ padding: '10px 8px', borderBottom: '2px solid #cbd5e1', textAlign: 'left', color: '#475569' }}>Date</th>
-                                ${familyMembers.filter(m => m.isKid).map(kid => (
+                                ${familyMembers.filter(m => m.participatesInChores).map(kid => (
                                   html`<th key=${kid.id} style=${{ padding: '10px 8px', borderBottom: '2px solid #cbd5e1', color: kid.color }}>${kid.name}</th>`
                                 ))}
                               </tr>
@@ -2236,7 +2236,7 @@ export default defineConfig([
                                     <td style=${{ padding: '10px 8px', textAlign: 'left', fontWeight: isToday ? '700' : '500', color: '#334155' }}>
                                       ${dayStr} ${isToday && '(Today)'}
                                     </td>
-                                    ${familyMembers.filter(m => m.isKid).map(kid => {
+                                    ${familyMembers.filter(m => m.participatesInChores).map(kid => {
                                       const pts = getPointsForKidOnDate(kid.id, d);
                                       const is100 = pts === 100;
                                       return (
@@ -2256,7 +2256,7 @@ export default defineConfig([
                   })()}
                   <div style=${{ marginBottom: '15px' }}>
                     ${(() => {
-                      const kids = familyMembers.filter(m => m.isKid);
+                      const kids = familyMembers.filter(m => m.participatesInChores);
                       const bonusChores = chores.filter(c => (!c.assignedTo || c.assignedTo === 'unassigned') && !c.isArchived).sort((a, b) => a.name.localeCompare(b.name));
                       const renderChoreRow = (chore) => (
                         html`<div key=${chore.id} style=${{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '10px', marginBottom: '8px', border: '2px solid #e5e7eb', minWidth: 0 }}>
@@ -2456,7 +2456,7 @@ export default defineConfig([
                         const allChores = cal.choresList || chores;
                         const members = cal.familyMembers || familyMembers;
                         const bonus = cal.completionBonus !== undefined ? cal.completionBonus : completionBonus;
-                        const kids = members.filter(m => m.isKid);
+                        const kids = members.filter(m => m.participatesInChores);
 
                         // 1. Merge everything into a single flat object to absolutely guarantee no duplicates
                         const allUniqueCompletions = {};
@@ -2916,7 +2916,7 @@ export default defineConfig([
                   <label style=${{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>Colour</label>
                   <input id="editColor" type="color" defaultValue=${editingMember.color} style=${{ width:'100%', height:'40px', marginBottom:'12px', borderRadius: '8px', border: '2px solid #e5e7eb', cursor: 'pointer' }} />
 
-                  ${editingMember.isKid && (html`<${React.Fragment}>
+                  ${editingMember.participatesInChores && (html`<${React.Fragment}>
                     <label style=${{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>💵 Pay Rate (per point)</label>
                     <div style=${{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                       <span style=${{ fontSize: '16px', color: '#6b7280', fontWeight: 'bold' }}>$</span>
@@ -2932,8 +2932,8 @@ export default defineConfig([
                   <button id="editMemberSaveBtn" onClick=${async ()=>{
                      const newName = document.getElementById('editName').value;
                      const newColor = document.getElementById('editColor').value;
-                     const newSound = editingMember.isKid ? document.getElementById('editMemberSound').value : editingMember.signatureSound;
-                     const newPayRate = editingMember.isKid ? parseFloat(document.getElementById('editPayRate').value) : null;
+                     const newSound = editingMember.participatesInChores ? document.getElementById('editMemberSound').value : editingMember.signatureSound;
+                     const newPayRate = editingMember.participatesInChores ? parseFloat(document.getElementById('editPayRate').value) : null;
                      const avatarFile = document.getElementById('editMemberAvatar').files[0];
                      const btn = document.getElementById('editMemberSaveBtn');
                      // Always read the true original from the live familyMembers array
@@ -3148,7 +3148,7 @@ export default defineConfig([
             const byMember = {};
             
             // Initialize with all kids so we can add chores even if they had 0 points that day
-            familyMembers.filter(m => m.isKid).forEach(kid => {
+            familyMembers.filter(m => m.participatesInChores).forEach(kid => {
               byMember[kid.id] = {
                 name: kid.name,
                 color: kid.color,
@@ -3395,7 +3395,7 @@ export default defineConfig([
                <div style=${{ background:'white', padding:'30px', borderRadius:'20px', width:'400px' }}>
                   <h3>Who did this?</h3>
                   <div style=${{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-                     ${familyMembers.filter(m=>m.isKid).map(m=>{
+                     ${familyMembers.filter(m=>m.participatesInChores).map(m=>{
                         const here = isHereToday(m);
                         return (
                         html`<button key=${m.id} disabled=${!here} onClick=${()=>{
@@ -3752,7 +3752,7 @@ export default defineConfig([
 {
   "name": "calendar",
   "private": true,
-  "version": "1.39.1",
+  "version": "1.40.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -3901,10 +3901,13 @@ console.log(`✅ Version updated to ${newVersion} in package.json`);
 ```javascript
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import KioskOverlay from './components/KioskOverlay';
 
 function App() {
   return (
     <BrowserRouter>
+      {/* The shield is now officially injected into the app */}
+      <KioskOverlay />
       <Routes>
         <Route path="/" element={<Home />} />
       </Routes>
@@ -3915,17 +3918,37 @@ function App() {
 export default App;
 ```
 
+### `// src/components/KioskOverlay.jsx`
+
+```javascript
+import { useKiosk } from '../hooks/useKiosk';
+
+export default function KioskOverlay() {
+  const { isDimmed, dimIntensity } = useKiosk();
+
+  return (
+    <div
+      className={`fixed inset-0 z-[9999] bg-black transition-opacity duration-1000 ease-in-out ${
+        isDimmed ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
+      style={{ opacity: isDimmed ? dimIntensity : 0 }}
+    />
+  );
+}
+```
+
 ### `// src/components/admin/AdminModal.jsx`
 
 ```javascript
-// src/components/admin/AdminModal.jsx
 import { useState } from 'react';
-import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid } from 'lucide-react';
+import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid, CalendarDays, Monitor } from 'lucide-react';
 import ThemeTab from './ThemeTab';
 import FamilyMembersTab from './FamilyMembersTab';
 import ChoresTab from './ChoresTab';
 import WidgetsTab from './WidgetsTab';
 import SystemToolsTab from './SystemToolsTab';
+import ScheduleManager from './ScheduleManager';
+import DeviceManagerTab from './DeviceManagerTab'; // NEW IMPORT
 
 const ADMIN_PIN = "8486";
 
@@ -3989,17 +4012,21 @@ export default function AdminModal({ isOpen, onClose }) {
         <div className="flex flex-1 overflow-hidden">
           <div className="w-64 bg-slate-50 border-r border-slate-100 p-4 flex flex-col gap-2 shrink-0">
             <TabButton active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users className="w-5 h-5" />} label="Family Members" />
+            <TabButton active={activeTab === 'custody'} onClick={() => setActiveTab('custody')} icon={<CalendarDays className="w-5 h-5" />} label="Custody & Schedule" />
             <TabButton active={activeTab === 'chores'} onClick={() => setActiveTab('chores')} icon={<ClipboardList className="w-5 h-5" />} label="Chores & Points" />
             <TabButton active={activeTab === 'widgets'} onClick={() => setActiveTab('widgets')} icon={<LayoutGrid className="w-5 h-5" />} label="Dashboard Widgets" />
             <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} icon={<Palette className="w-5 h-5" />} label="Theme & Display" />
+            <TabButton active={activeTab === 'devices'} onClick={() => setActiveTab('devices')} icon={<Monitor className="w-5 h-5" />} label="Display & Devices" />
             <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Database className="w-5 h-5" />} label="System Tools" />
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
             {activeTab === 'members' && <FamilyMembersTab />}
+            {activeTab === 'custody' && <ScheduleManager />}
             {activeTab === 'chores' && <ChoresTab />}
             {activeTab === 'widgets' && <WidgetsTab />}
             {activeTab === 'theme' && <ThemeTab />}
+            {activeTab === 'devices' && <DeviceManagerTab />}
             {activeTab === 'system' && <SystemToolsTab />}
           </div>
         </div>
@@ -4017,34 +4044,296 @@ function TabButton({ active, onClick, icon, label }) {
 }
 ```
 
+### `// src/components/admin/ChoreForecaster.jsx`
+
+```javascript
+// src/components/admin/ChoreForecaster.jsx
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { Calculator, AlertTriangle, CheckCircle2, CalendarDays } from 'lucide-react';
+
+export default function ChoreForecaster() {
+  const [kids, setKids] = useState([]);
+  const [chores, setChores] = useState([]);
+  const [overrides, setOverrides] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // 1. Fetch Kids, Chores, and Future Custody Overrides
+  useEffect(() => {
+    const kidsQuery = query(collection(db, 'familyMembers'), where('participatesInChores', '==', true));
+    const unsubKids = onSnapshot(kidsQuery, (snap) => {
+      setKids(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+    });
+
+    const unsubChores = onSnapshot(collection(db, 'chores'), (snap) => {
+      setChores(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Listen to all overrides so we can see future manual adjustments
+    const unsubOverrides = onSnapshot(collection(db, 'dailyOverrides'), (snap) => {
+      const ov = {};
+      snap.docs.forEach(doc => {
+        ov[doc.id] = doc.data(); // doc.id is formatted "YYYY-MM-DD"
+      });
+      setOverrides(ov);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubKids();
+      unsubChores();
+      unsubOverrides();
+    };
+  }, []);
+
+  const getLocalIsoDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 2. Exact replication of your useCustody math
+  const participatesInChoresHereOnDate = (kid, dateObj) => {
+    const isoDate = getLocalIsoDate(dateObj);
+    
+    // Check manual override first
+    if (overrides[isoDate] && overrides[isoDate][kid.id] !== undefined) {
+      return overrides[isoDate][kid.id];
+    }
+
+    // Check base schedule pattern array
+    if (!kid || !kid.schedule || !kid.schedule.pattern || kid.schedule.pattern.length === 0) return true;
+    if (!kid.schedule.referenceDate) return true;
+
+    const pattern = kid.schedule.pattern;
+    const cycleLength = pattern.length;
+    
+    const target = new Date(dateObj);
+    target.setHours(0, 0, 0, 0);
+    
+    const [refY, refM, refD] = kid.schedule.referenceDate.split('-');
+    const refDate = new Date(refY, refM - 1, refD);
+    refDate.setHours(0, 0, 0, 0);
+    
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysDiff = Math.round((target - refDate) / msPerDay);
+    const cycleDay = ((daysDiff % cycleLength) + cycleLength) % cycleLength;
+    
+    return pattern[cycleDay];
+  };
+
+  // 3. Generate the next 14 days
+  const getNext14Days = () => {
+    const days = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      days.push({
+        dateObj: d,
+        dayName: dayNames[d.getDay()],
+        dayString: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      });
+    }
+    return days;
+  };
+
+  const forecastDays = getNext14Days();
+
+  // 4. Mathematical Engine: Matches your chore frequency schemas
+  const calculateDailyPoints = (kid, day) => {
+    let totalPoints = 0;
+    
+    // If the kid is away, they are assigned 0 chores/points that day
+    if (!participatesInChoresHereOnDate(kid, day.dateObj)) {
+      return 0;
+    }
+
+    chores.forEach(chore => {
+      if (chore.isArchived) return;
+      if (chore.assignedTo !== kid.id) return;
+
+      const targetDay = day.dateObj.getDay();
+
+      if (chore.frequency === 'today-only') {
+        if (chore.createdDate === day.dateObj.toDateString()) {
+          totalPoints += Number(chore.points || 0);
+        }
+      } else if (chore.frequency === 'daily' || !chore.frequency) {
+        totalPoints += Number(chore.points || 0);
+      } else if (chore.frequency === 'weekly') {
+        if (chore.days && chore.days.includes(targetDay)) {
+          totalPoints += Number(chore.points || 0);
+        } else if (chore.weekDay !== null && chore.weekDay !== undefined && !chore.days && chore.weekDay === targetDay) {
+          totalPoints += Number(chore.points || 0); // Legacy fallback
+        }
+      } else if (chore.frequency === 'bi-weekly' && chore.days && chore.days.includes(targetDay) && chore.startDate) {
+        const start = new Date(chore.startDate + 'T00:00:00');
+        start.setHours(0, 0, 0, 0);
+        const startSun = new Date(start); 
+        startSun.setDate(startSun.getDate() - startSun.getDay());
+        
+        const targetSun = new Date(day.dateObj); 
+        targetSun.setDate(targetSun.getDate() - targetSun.getDay());
+        
+        const daysDiff = Math.round((targetSun - startSun) / (24 * 60 * 60 * 1000));
+        const weeksDiff = Math.floor(daysDiff / 7);
+        if (weeksDiff % 2 === 0) {
+          totalPoints += Number(chore.points || 0);
+        }
+      }
+    });
+
+    return totalPoints;
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-400 animate-pulse font-medium">Booting mathematical forecaster...</div>;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+      
+      {/* Header */}
+      <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+            <Calculator className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-800">14-Day Forecaster Matrix</h3>
+            <p className="text-xs text-slate-500">Cross-referencing custody schedules to ensure 100pt/day targets.</p>
+          </div>
+        </div>
+        <div className="flex gap-4 text-xs font-bold uppercase tracking-wider">
+          <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 className="w-4 h-4"/> Target (100)</span>
+          <span className="flex items-center gap-1 text-amber-500"><AlertTriangle className="w-4 h-4"/> Under (&lt;100)</span>
+          <span className="flex items-center gap-1 text-rose-500"><AlertTriangle className="w-4 h-4"/> Over (&gt;100)</span>
+        </div>
+      </div>
+
+      {/* Matrix Table */}
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_#e2e8f0]">Family Member</th>
+              {forecastDays.map((day, idx) => (
+                <th key={idx} className={`px-2 py-3 text-center min-w-[70px] ${idx === 0 ? 'bg-indigo-50 text-indigo-700' : ''}`}>
+                  <div className="font-bold">{day.dayName}</div>
+                  <div className="text-[10px] font-medium opacity-70">{day.dayString}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {kids.map(kid => (
+              <tr key={kid.id} className="hover:bg-slate-50 transition-colors">
+                
+                {/* Kid Name Column (Sticky) */}
+                <td className="px-4 py-3 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 transition-colors shadow-[1px_0_0_0_#e2e8f0] flex items-center gap-2 z-10">
+                  <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-white shadow-inner overflow-hidden shrink-0" style={{ backgroundColor: kid.color || '#6366f1' }}>
+                     {kid.avatar ? <img src={kid.avatar} className="w-full h-full object-cover" alt={kid.name} /> : kid.name.charAt(0)}
+                  </div>
+                  <span className="truncate max-w-[100px]">{kid.name}</span>
+                </td>
+
+                {/* Day Columns */}
+                {forecastDays.map((day, idx) => {
+                  const isHere = participatesInChoresHereOnDate(kid, day.dateObj);
+                  const pts = calculateDailyPoints(kid, day);
+                  
+                  // Color Logic
+                  let cellBg = 'bg-slate-50';
+                  let textColor = 'text-slate-400';
+                  let fontWeight = 'font-medium';
+                  let content = pts;
+                  
+                  if (!isHere) {
+                    cellBg = 'bg-slate-100/50 border border-slate-200/50';
+                    textColor = 'text-slate-400';
+                    fontWeight = 'font-bold text-[9px] uppercase tracking-wider';
+                    content = 'Away';
+                  } else if (pts === 100) {
+                    cellBg = 'bg-emerald-100 border border-emerald-200';
+                    textColor = 'text-emerald-700';
+                    fontWeight = 'font-black';
+                  } else if (pts > 0 && pts < 100) {
+                    cellBg = 'bg-amber-50 border border-amber-200';
+                    textColor = 'text-amber-600';
+                    fontWeight = 'font-bold';
+                  } else if (pts > 100) {
+                    cellBg = 'bg-rose-50 border border-rose-200';
+                    textColor = 'text-rose-600';
+                    fontWeight = 'font-black';
+                  } else if (pts === 0) {
+                    cellBg = 'bg-slate-50 border border-slate-200';
+                    textColor = 'text-slate-400';
+                    fontWeight = 'font-bold';
+                  }
+
+                  return (
+                    <td key={idx} className="p-1.5 text-center">
+                      <div 
+                        className={`w-full h-full py-2 rounded-lg flex items-center justify-center transition-all ${cellBg} ${textColor} ${fontWeight}`}
+                        title={!isHere ? `${kid.name} is scheduled to be away` : `${pts} points assigned`}
+                      >
+                        {content}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        {kids.length === 0 && (
+          <div className="p-8 text-center text-slate-400 font-medium">
+            No kids found in the roster. Add kids in the Family Members tab to view the forecast!
+          </div>
+        )}
+      </div>
+      
+      <div className="bg-slate-50 p-3 text-[11px] text-slate-500 border-t border-slate-100 flex items-center gap-2">
+         <CalendarDays className="w-4 h-4 shrink-0" />
+         This matrix reads directly from your custody override schedule and automatically calculates points to ensure everyone hits exactly 100 points on the days they are home.
+      </div>
+    </div>
+  );
+}
+```
+
 ### `// src/components/admin/ChoresTab.jsx`
 
 ```javascript
 // src/components/admin/ChoresTab.jsx
 import { useState, useEffect } from 'react';
-import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { Plus, Trash2, Edit2, Save, CalendarDays, CheckSquare } from 'lucide-react';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { Plus, Trash2, Edit2, Save, CalendarDays, CheckSquare, X, Calculator, Settings } from 'lucide-react';
 import { db } from '../../config/firebase';
 import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import ChoreForecaster from './ChoreForecaster';
 
 export default function ChoresTab() {
   const { chores, loading: choresLoading } = useChores();
   const { members, loading: membersLoading } = useFamilyMembers();
-  const [isAdding, setIsAdding] = useState(false);
   
-  const [newChore, setNewChore] = useState({ 
-    name: '', 
-    points: 10, 
-    frequency: 'daily', 
-    assignedTo: 'unassigned' 
-  });
+  const [activeTab, setActiveTab] = useState('manage'); // 'manage', 'forecast', 'settings'
+  
+  const [isAdding, setIsAdding] = useState(false);
+  const [newChore, setNewChore] = useState({ name: '', points: 10, frequency: 'daily', assignedTo: 'unassigned', days: [], startDate: '' });
+  const [editingChore, setEditingChore] = useState(null);
 
-  // NEW: Allowance Settings State
+  // Allowance Settings State
   const [allowanceConfig, setAllowanceConfig] = useState({ payDay: 5 }); // Default to Friday
   const [saving, setSaving] = useState(false);
 
-  // NEW: Fetch Allowance Config
+  // Fetch Allowance Config
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'allowance'), (docSnap) => {
       if (docSnap.exists()) setAllowanceConfig(docSnap.data());
@@ -4052,7 +4341,7 @@ export default function ChoresTab() {
     return () => unsub();
   }, []);
 
-  // NEW: Save Allowance Config
+  // Save Allowance Config
   const handleSaveConfig = async () => {
     setSaving(true);
     try {
@@ -4067,179 +4356,534 @@ export default function ChoresTab() {
     e.preventDefault();
     if (!newChore.name) return;
     
-    // Generate a unique ID (e.g., "empty-dishwasher-4928")
-    const id = newChore.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4);
+    try {
+      const choreId = Date.now().toString();
+      const choreData = {
+        ...newChore,
+        points: Number(newChore.points)
+      };
+      
+      if (choreData.frequency === 'today-only') {
+         choreData.createdDate = new Date().toDateString();
+         choreData.todayOnly = true;
+      }
+      
+      if (choreData.frequency !== 'weekly' && choreData.frequency !== 'bi-weekly') {
+         choreData.days = null;
+         choreData.startDate = null;
+      }
+
+      await setDoc(doc(db, 'chores', choreId), choreData);
+      setIsAdding(false);
+      setNewChore({ name: '', points: 10, frequency: 'daily', assignedTo: 'unassigned', days: [], startDate: '' });
+    } catch (err) {
+      console.error("Error adding chore:", err);
+      alert("Failed to add chore");
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingChore.name) return;
     
     try {
-      // Atomic write to Firestore - prevents overwriting other chores!
-      await setDoc(doc(db, 'chores', id), {
-        ...newChore,
-        points: parseInt(newChore.points) || 0,
-        id
-      });
-      
-      setNewChore({ name: '', points: 10, frequency: 'daily', assignedTo: 'unassigned' });
-      setIsAdding(false);
-    } catch (error) {
-      console.error("Error adding chore: ", error);
-      alert("Failed to add chore to database.");
+      const choreData = {
+        ...editingChore,
+        points: Number(editingChore.points)
+      };
+
+      if (choreData.frequency !== 'weekly' && choreData.frequency !== 'bi-weekly') {
+         choreData.days = null;
+         choreData.startDate = null;
+      }
+
+      await setDoc(doc(db, 'chores', editingChore.id), choreData, { merge: true });
+      setEditingChore(null);
+    } catch (err) {
+      console.error("Error updating chore:", err);
+      alert("Failed to update chore");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (confirm("Delete this chore?")) {
-      await deleteDoc(doc(db, 'chores', id));
+  const handleDelete = async (choreId) => {
+    if (window.confirm("Archive this chore? It will be removed from daily lists but kept to protect past score history.")) {
+      try {
+        await setDoc(doc(db, 'chores', choreId), { 
+          isArchived: true, 
+          archivedDate: new Date().toISOString().slice(0, 10) 
+        }, { merge: true });
+      } catch (err) {
+        console.error("Error archiving chore:", err);
+        alert("Failed to archive chore.");
+      }
     }
   };
 
-  if (choresLoading || membersLoading) return <div className="p-8 text-center text-slate-500 font-medium animate-pulse">Loading data...</div>;
-
-  // Helper to find member name for display
-  const getMemberName = (id) => {
-    if (id === 'unassigned') return '⭐ Bonus (Anyone)';
-    const member = members.find(m => m.id === id);
-    return member ? member.name : 'Unknown';
+  const toggleDay = (dayIndex, isEditing = false) => {
+    if (isEditing) {
+      const currentDays = editingChore.days || [];
+      const newDays = currentDays.includes(dayIndex) 
+        ? currentDays.filter(d => d !== dayIndex)
+        : [...currentDays, dayIndex];
+      setEditingChore({ ...editingChore, days: newDays });
+    } else {
+      const currentDays = newChore.days || [];
+      const newDays = currentDays.includes(dayIndex) 
+        ? currentDays.filter(d => d !== dayIndex)
+        : [...currentDays, dayIndex];
+      setNewChore({ ...newChore, days: newDays });
+    }
   };
+
+  if (choresLoading || membersLoading) return <div className="p-4 animate-pulse font-medium text-slate-500">Loading chores...</div>;
+
+  const kids = members.filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true');
+  const activeChores = chores.filter(c => !c.isArchived);
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-300 pb-10">
       
-      {/* NEW: Allowance & Pay Day Settings */}
-      <section>
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
-          <CalendarDays className="text-indigo-600" /> Allowance Settings
-        </h3>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Chore Pay Day</label>
-            <select 
-              value={allowanceConfig.payDay}
-              onChange={(e) => setAllowanceConfig({ payDay: Number(e.target.value) })}
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
-            >
-              <option value={0}>Sunday</option>
-              <option value={1}>Monday</option>
-              <option value={2}>Tuesday</option>
-              <option value={3}>Wednesday</option>
-              <option value={4}>Thursday</option>
-              <option value={5}>Friday</option>
-              <option value={6}>Saturday</option>
-            </select>
-            <p className="text-xs text-slate-500 mt-2">This determines when payouts are highlighted in the kids' history charts.</p>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6 border border-slate-200 shadow-inner overflow-x-auto">
+        <button 
+          onClick={() => setActiveTab('manage')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'manage' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <CheckSquare className="w-4 h-4" /> Manage Chores
+        </button>
+        <button 
+          onClick={() => setActiveTab('forecast')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'forecast' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <Calculator className="w-4 h-4" /> Forecaster Matrix
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <Settings className="w-4 h-4" /> Allowance Settings
+        </button>
+      </div>
 
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
+      {/* Tab Content: Forecast */}
+      {activeTab === 'forecast' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <ChoreForecaster />
+        </div>
+      )}
+
+      {/* Tab Content: Settings */}
+      {activeTab === 'settings' && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="w-5 h-5 text-indigo-500" />
+            <h3 className="font-bold text-slate-800 text-lg">Weekly Allowance Target</h3>
+          </div>
+          <p className="text-sm text-slate-500 mb-6">Select the day of the week your family distributes allowance. This helps the kid dashboards highlight when pay day is arriving.</p>
+          
+          <div className="flex items-end gap-4 max-w-md">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Weekly Pay Day</label>
+              <select 
+                value={allowanceConfig.payDay} 
+                onChange={(e) => setAllowanceConfig({ ...allowanceConfig, payDay: Number(e.target.value) })}
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+              >
+                <option value={0}>Sunday</option>
+                <option value={1}>Monday</option>
+                <option value={2}>Tuesday</option>
+                <option value={3}>Wednesday</option>
+                <option value={4}>Thursday</option>
+                <option value={5}>Friday</option>
+                <option value={6}>Saturday</option>
+              </select>
+            </div>
             <button 
               onClick={handleSaveConfig}
               disabled={saving}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 shadow-sm"
+              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 h-[50px] shadow-sm"
             >
-              <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Settings'}
+              <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Config'}
             </button>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* Divider */}
-      <div className="w-full h-px bg-slate-200"></div>
+      {/* Tab Content: Manage */}
+      {activeTab === 'manage' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
+              Active Task List
+            </h3>
+            <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="flex items-center gap-1 text-sm font-bold text-white bg-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              {isAdding ? 'Cancel' : <><Plus className="w-4 h-4" /> Add Chore</>}
+            </button>
+          </div>
 
-      {/* ORIGINAL: Header Area */}
-      <section className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <CheckSquare className="text-indigo-600" /> Chores Management
-          </h3>
-          <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-colors shadow-sm ${
-              isAdding ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-            }`}
-          >
-            {isAdding ? 'Cancel' : <><Plus className="w-5 h-5" /> Add Chore</>}
-          </button>
-        </div>
+          {isAdding && (
+            <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm mb-8 animate-in slide-in-from-top-4 duration-300">
+              <h4 className="font-bold text-indigo-900 mb-4">Create New Chore</h4>
+              <form onSubmit={handleAdd} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Chore Name</label>
+                    <input required type="text" value={newChore.name} onChange={e => setNewChore({...newChore, name: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-white font-semibold focus:outline-none focus:border-indigo-500" placeholder="e.g. Empty Dishwasher" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Points Value</label>
+                    <input required type="number" min="0" value={newChore.points} onChange={e => setNewChore({...newChore, points: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-white font-semibold focus:outline-none focus:border-indigo-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assign To</label>
+                    <select value={newChore.assignedTo} onChange={e => setNewChore({...newChore, assignedTo: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-white font-semibold focus:outline-none focus:border-indigo-500">
+                      <option value="unassigned">⭐ Bonus / Anyone</option>
+                      {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Frequency</label>
+                    <select value={newChore.frequency} onChange={e => setNewChore({...newChore, frequency: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-white font-semibold focus:outline-none focus:border-indigo-500">
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="bi-weekly">Bi-Weekly</option>
+                      <option value="today-only">📅 Today Only</option>
+                    </select>
+                  </div>
+                </div>
 
-        {/* ORIGINAL: Add New Chore Form */}
-        {isAdding && (
-          <form onSubmit={handleAdd} className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm">
-            <h4 className="font-bold text-amber-900">Add New Chore</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-600 mb-1">Chore Name</label>
-                <input type="text" value={newChore.name} onChange={e => setNewChore({...newChore, name: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 transition-colors" placeholder="e.g. Empty Dishwasher" required />
-              </div>
+                {(newChore.frequency === 'weekly' || newChore.frequency === 'bi-weekly') && (
+                  <div className="bg-white p-4 rounded-xl border border-slate-200">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Select Days</label>
+                    <div className="flex gap-2">
+                      {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day, i) => (
+                        <button type="button" key={i} onClick={() => toggleDay(i)} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors border ${newChore.days?.includes(i) ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {newChore.frequency === 'bi-weekly' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Starting Week Of (Anchor Date)</label>
+                    <input type="date" required value={newChore.startDate} onChange={e => setNewChore({...newChore, startDate: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-white font-semibold focus:outline-none focus:border-indigo-500" />
+                  </div>
+                )}
+
+                <button type="submit" className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors shadow-sm">
+                  Save New Chore
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Group Chores by Kid */}
+          <div className="space-y-4">
+            {[...kids, { id: 'unassigned', name: '⭐ Bonus Chores', color: '#f59e0b' }].map(assignee => {
+              const assigneeChores = activeChores.filter(c => c.assignedTo === assignee.id || (!c.assignedTo && assignee.id === 'unassigned')).sort((a, b) => a.name.localeCompare(b.name));
               
-              <div>
-                <label className="block text-sm font-bold text-slate-600 mb-1">Points Value</label>
-                <input type="number" min="0" value={newChore.points} onChange={e => setNewChore({...newChore, points: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 transition-colors" required />
-              </div>
+              if (assigneeChores.length === 0) return null;
 
+              return (
+                <div key={assignee.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between" style={{ backgroundColor: `${assignee.color}15` }}>
+                    <h4 className="font-bold text-lg" style={{ color: assignee.color }}>{assignee.name}</h4>
+                    <span className="text-xs font-bold opacity-60" style={{ color: assignee.color }}>{assigneeChores.length} Assigned</span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {assigneeChores.map(chore => (
+                      <div key={chore.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div>
+                          <div className="font-bold text-slate-800 flex items-center gap-2">
+                            {chore.name}
+                            {chore.frequency === 'today-only' && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md uppercase tracking-wider">Today Only</span>}
+                          </div>
+                          <div className="text-xs text-slate-500 font-medium mt-1">
+                            {chore.points} points • {chore.frequency.replace('-', ' ')}
+                            {(chore.frequency === 'weekly' || chore.frequency === 'bi-weekly') && chore.days && ` (${chore.days.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')})`}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingChore(chore)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(chore.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Editing Modal */}
+      {editingChore && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-[1100]" onClick={() => setEditingChore(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">Edit Chore</h3>
+              <button onClick={() => setEditingChore(null)} className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-slate-600 mb-1">Frequency</label>
-                <select value={newChore.frequency} onChange={e => setNewChore({...newChore, frequency: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 transition-colors bg-white">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Chore Name</label>
+                <input required type="text" value={editingChore.name} onChange={e => setEditingChore({...editingChore, name: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Points</label>
+                  <input required type="number" min="0" value={editingChore.points} onChange={e => setEditingChore({...editingChore, points: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assign To</label>
+                  <select value={editingChore.assignedTo} onChange={e => setEditingChore({...editingChore, assignedTo: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500">
+                    <option value="unassigned">⭐ Bonus / Anyone</option>
+                    {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Frequency</label>
+                <select value={editingChore.frequency} onChange={e => setEditingChore({...editingChore, frequency: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500">
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="bi-weekly">Bi-Weekly</option>
-                  <option value="today-only">📅 Today Only</option>
                 </select>
               </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-600 mb-1">Assign To</label>
-                <select value={newChore.assignedTo} onChange={e => setNewChore({...newChore, assignedTo: e.target.value})} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-amber-500 transition-colors bg-white">
-                  <option value="unassigned">⭐ Bonus (Anyone can claim)</option>
-                  {members.filter(m => m.isKid).map(kid => (
-                    <option key={kid.id} value={kid.id}>{kid.name}</option>
-                  ))}
-                </select>
+
+              {(editingChore.frequency === 'weekly' || editingChore.frequency === 'bi-weekly') && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Select Days</label>
+                  <div className="flex gap-1.5">
+                    {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day, i) => (
+                      <button type="button" key={i} onClick={() => toggleDay(i, true)} className={`flex-1 py-2 rounded-lg font-bold text-[11px] uppercase transition-colors border ${editingChore.days?.includes(i) ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editingChore.frequency === 'bi-weekly' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Starting Week Of (Anchor Date)</label>
+                  <input type="date" required value={editingChore.startDate || ''} onChange={e => setEditingChore({...editingChore, startDate: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" />
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100">
+                <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-md">
+                  Save Changes
+                </button>
               </div>
-            </div>
-            
-            <button type="submit" className="mt-2 w-full py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-md">
-              Save Chore to Database
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+```
+
+### `// src/components/admin/DeviceManagerTab.jsx`
+
+```javascript
+import { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { Monitor, Moon, VolumeX, Save, Sun, TabletSmartphone, CheckCircle2 } from 'lucide-react';
+import { useKiosk } from '../../hooks/useKiosk';
+
+export default function DeviceManagerTab() {
+  const { isKioskDevice, toggleKioskMode } = useKiosk();
+  
+  const [config, setConfig] = useState({
+    manualDim: false,
+    manualMute: false,
+    dimIntensity: 0.85,
+    quietTimeEnabled: false,
+    quietTimeStart: '20:00',
+    quietTimeEnd: '07:00'
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'saving' | 'saved'
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const docSnap = await getDoc(doc(db, 'settings', 'kiosk'));
+      if (docSnap.exists()) {
+        setConfig(prev => ({ ...prev, ...docSnap.data() }));
+      }
+      setLoading(false);
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setSaveState('saving');
+    try {
+      await setDoc(doc(db, 'settings', 'kiosk'), config, { merge: true });
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch (error) {
+      console.error("Error saving kiosk config:", error);
+      alert(`Failed to save settings: ${error.message}`);
+      setSaveState('idle');
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center animate-pulse text-slate-500">Loading device settings...</div>;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 pb-10">
+      <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+        <Monitor className="text-indigo-600 w-6 h-6" /> Display & Devices
+      </h3>
+
+      {/* LOCAL DEVICE CONFIGURATION */}
+      <div className="bg-sky-50 border-2 border-sky-200 p-5 rounded-2xl shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h4 className="text-sm font-bold text-sky-900 flex items-center gap-2">
+              <TabletSmartphone className="w-5 h-5" /> Local Device Role
+            </h4>
+            <p className="text-xs text-sky-700 mt-1 max-w-sm">
+              Enable this only on the wall-mounted calendar. If enabled, this specific screen will obey the auto-dimming and muting commands below.
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <input 
+              type="checkbox" 
+              checked={isKioskDevice}
+              onChange={(e) => toggleKioskMode(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-14 h-7 bg-sky-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-sky-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        
+        {/* Manual Overrides */}
+        <div>
+          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Push to all Kiosks</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <button 
+              onClick={() => setConfig({ ...config, manualDim: !config.manualDim })}
+              className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                config.manualDim ? 'bg-slate-800 border-slate-900 text-amber-300' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              {config.manualDim ? <Moon className="w-8 h-8 mb-2" /> : <Sun className="w-8 h-8 mb-2" />}
+              <span className="font-bold">{config.manualDim ? 'Force Dimmed' : 'Force Bright'}</span>
             </button>
-          </form>
-        )}
 
-        {/* ORIGINAL: The Chores List */}
-        <div className="flex flex-col gap-3">
-          {chores.map(chore => (
-            <div key={chore.id} className="flex items-center justify-between p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-amber-100 transition-colors">
+            <button 
+              onClick={() => setConfig({ ...config, manualMute: !config.manualMute })}
+              className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                config.manualMute ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <VolumeX className="w-8 h-8 mb-2" />
+              <span className="font-bold">{config.manualMute ? 'System Muted' : 'System Audio On'}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full h-px bg-slate-100"></div>
+
+        {/* Quiet Time Scheduler */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800">Automated Quiet Time</h4>
+              <p className="text-xs text-slate-500">Automatically dims Kiosk screens and mutes sounds during sleeping hours.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={config.quietTimeEnabled}
+                onChange={(e) => setConfig({...config, quietTimeEnabled: e.target.checked})}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+
+          {config.quietTimeEnabled && (
+            <div className="grid grid-cols-2 gap-4 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 animate-in fade-in zoom-in-95 duration-200">
               <div>
-                <div className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                  {chore.name}
-                  <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md">
-                    {chore.points} pts
-                  </span>
-                </div>
-                <div className="text-sm font-medium text-slate-500 flex items-center gap-2 mt-1">
-                  <span className="capitalize">{chore.frequency}</span>
-                  <span>•</span>
-                  <span className={`${chore.assignedTo === 'unassigned' ? 'text-amber-500 font-bold' : ''}`}>
-                    {getMemberName(chore.assignedTo)}
-                  </span>
-                </div>
+                <label className="block text-xs font-bold text-indigo-900 mb-1">Start Time (Dim)</label>
+                <input 
+                  type="time" 
+                  value={config.quietTimeStart}
+                  onChange={(e) => setConfig({...config, quietTimeStart: e.target.value})}
+                  className="w-full p-2.5 border border-indigo-200 rounded-lg text-sm font-bold text-indigo-900 focus:outline-none focus:border-indigo-500"
+                />
               </div>
-              
-              <div className="flex gap-2">
-                <button onClick={() => alert('Edit modal coming in next phase!')} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit Chore">
-                  <Edit2 className="w-5 h-5" />
-                </button>
-                <button onClick={() => handleDelete(chore.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Chore">
-                  <Trash2 className="w-5 h-5" />
-                </button>
+              <div>
+                <label className="block text-xs font-bold text-indigo-900 mb-1">End Time (Wake)</label>
+                <input 
+                  type="time" 
+                  value={config.quietTimeEnd}
+                  onChange={(e) => setConfig({...config, quietTimeEnd: e.target.value})}
+                  className="w-full p-2.5 border border-indigo-200 rounded-lg text-sm font-bold text-indigo-900 focus:outline-none focus:border-indigo-500"
+                />
               </div>
             </div>
-          ))}
-
-          {chores.length === 0 && !choresLoading && (
-             <div className="text-center text-slate-500 py-8 border-2 border-dashed border-slate-200 rounded-2xl">
-               No chores found. Add some above!
-             </div>
           )}
         </div>
-      </section>
+
+        <div className="w-full h-px bg-slate-100"></div>
+
+        {/* Dim Intensity */}
+        <div>
+          <label className="flex items-center justify-between text-sm font-bold text-slate-700 mb-2">
+            <span>Dimming Intensity</span>
+            <span className="text-indigo-600">{Math.round(config.dimIntensity * 100)}% Blackout</span>
+          </label>
+          <input 
+            type="range" 
+            min="0.1" 
+            max="0.95" 
+            step="0.05"
+            value={config.dimIntensity}
+            onChange={(e) => setConfig({...config, dimIntensity: Number(e.target.value)})}
+            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+          <p className="text-xs text-slate-400 mt-2">Adjust how dark Kiosk screens get when Dim Mode or Quiet Time is active.</p>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 flex justify-end">
+          <button 
+            onClick={handleSave}
+            disabled={saveState !== 'idle'}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+              saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-80`}
+          >
+            {saveState === 'saving' && 'Saving...'}
+            {saveState === 'saved' && <><CheckCircle2 className="w-5 h-5" /> Saved!</>}
+            {saveState === 'idle' && <><Save className="w-5 h-5" /> Save Kiosk Settings</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -4546,9 +5190,10 @@ export default function FactsTab() {
 // src/components/admin/FamilyMembersTab.jsx
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
 import { Edit2, Trash2, Plus, X, Loader2, Image as ImageIcon, Music, PlayCircle } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompression'; 
+import { uploadToCloudflare } from '../../utils/cloudflareUploader';
 
 export default function FamilyMembersTab() {
   const [members, setMembers] = useState([]);
@@ -4566,15 +5211,14 @@ export default function FamilyMembersTab() {
     const unsub = onSnapshot(collection(db, 'familyMembers'), (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMembers(membersData.sort((a, b) => {
-        if (a.isKid === b.isKid) return a.name.localeCompare(b.name);
-        return a.isKid ? 1 : -1;
+        if (a.participatesInChores === b.participatesInChores) return a.name.localeCompare(b.name);
+        return a.participatesInChores ? 1 : -1;
       }));
       setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // Listen to the shared Avatar Library
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'avatars'), (docSnap) => {
       if (docSnap.exists()) {
@@ -4586,7 +5230,6 @@ export default function FamilyMembersTab() {
     return () => unsub();
   }, []);
 
-  // Listen to the shared Sound Library
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'sounds'), (docSnap) => {
       if (docSnap.exists()) {
@@ -4604,7 +5247,7 @@ export default function FamilyMembersTab() {
       const memberData = {
         name: e.target.name.value,
         color: e.target.color.value,
-        isKid: e.target.role.value === 'kid',
+        participatesInChores: e.target.role.value === 'kid',
         payRate: Number(e.target.payRate.value) || 0,
         pin: e.target.pin.value || ''
       };
@@ -4612,12 +5255,7 @@ export default function FamilyMembersTab() {
       if (currentMember?.id) {
         await updateDoc(doc(db, 'familyMembers', currentMember.id), memberData);
       } else {
-        await addDoc(collection(db, 'familyMembers'), {
-          ...memberData,
-          points: 0,
-          avatar: '',
-          signatureSound: ''
-        });
+        await addDoc(collection(db, 'familyMembers'), { ...memberData, points: 0, avatar: '', signatureSound: '' });
       }
       setIsEditing(false);
       setCurrentMember(null);
@@ -4635,23 +5273,24 @@ export default function FamilyMembersTab() {
 
   // Avatar Library Handlers
   const handleUploadToLibrary = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target?.files?.[0];
+    const inputElement = e.target;
+    
     if (!file) return;
-
+    
     setUploadingAvatar(true);
     try {
-      const fileRef = ref(storage, `avatars/library_${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      const optimizedBlob = await compressImage(file, 400, 400, 0.8);
       
-      await setDoc(doc(db, 'settings', 'avatars'), {
-        urls: arrayUnion(url)
-      }, { merge: true });
-
+      const safeName = `library_${Date.now()}_${file.name.replace(/\.[^/.]+$/, ".jpg")}`;
+      const url = await uploadToCloudflare(optimizedBlob, safeName);
+      
+      await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayUnion(url) }, { merge: true });
     } catch (error) {
       console.error("Error uploading to library:", error);
-      alert("Failed to upload default avatar.");
+      alert("Failed to upload default avatar to Cloudflare.");
     } finally {
+      if (inputElement) inputElement.value = '';
       setUploadingAvatar(false);
     }
   };
@@ -4659,9 +5298,7 @@ export default function FamilyMembersTab() {
   const handleDeleteFromLibrary = async (url) => {
     if (!window.confirm("Remove this avatar from the default choices?")) return;
     try {
-      await setDoc(doc(db, 'settings', 'avatars'), {
-        urls: arrayRemove(url)
-      }, { merge: true });
+      await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayRemove(url) }, { merge: true });
     } catch (error) {
       console.error("Error removing avatar:", error);
     }
@@ -4669,26 +5306,28 @@ export default function FamilyMembersTab() {
 
   // Sound Library Handlers
   const handleUploadSound = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target?.files?.[0];
+    const inputElement = e.target;
     if (!file) return;
 
     const soundName = window.prompt("Give this signature sound a short name (e.g., 'Magic Wand'):");
-    if (!soundName) return;
+    if (!soundName) {
+      if (inputElement) inputElement.value = '';
+      return;
+    }
 
     setUploadingSound(true);
     try {
-      const fileRef = ref(storage, `sounds/library_${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      // Audio goes up raw, no compression needed
+      const safeName = `sound_${Date.now()}_${file.name}`;
+      const url = await uploadToCloudflare(file, safeName);
       
-      await setDoc(doc(db, 'settings', 'sounds'), {
-        items: arrayUnion({ name: soundName, url })
-      }, { merge: true });
-
+      await setDoc(doc(db, 'settings', 'sounds'), { items: arrayUnion({ name: soundName, url }) }, { merge: true });
     } catch (error) {
       console.error("Error uploading sound:", error);
-      alert("Failed to upload signature sound.");
+      alert("Failed to upload signature sound to Cloudflare.");
     } finally {
+      if (inputElement) inputElement.value = '';
       setUploadingSound(false);
     }
   };
@@ -4696,9 +5335,7 @@ export default function FamilyMembersTab() {
   const handleDeleteSound = async (soundObj) => {
     if (!window.confirm(`Remove "${soundObj.name}" from the sound choices?`)) return;
     try {
-      await setDoc(doc(db, 'settings', 'sounds'), {
-        items: arrayRemove(soundObj)
-      }, { merge: true });
+      await setDoc(doc(db, 'settings', 'sounds'), { items: arrayRemove(soundObj) }, { merge: true });
     } catch (error) {
       console.error("Error removing sound:", error);
     }
@@ -4730,16 +5367,16 @@ export default function FamilyMembersTab() {
               name="name" 
               defaultValue={currentMember?.name} 
               required 
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
+              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors" 
             />
           </div>
-
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
               <select 
                 name="role" 
-                defaultValue={currentMember?.isKid ? 'kid' : 'parent'}
+                defaultValue={currentMember?.participatesInChores ? 'kid' : 'parent'} 
                 className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
               >
                 <option value="kid">Kid</option>
@@ -4752,7 +5389,7 @@ export default function FamilyMembersTab() {
                 type="color" 
                 name="color" 
                 defaultValue={currentMember?.color || '#6366f1'} 
-                className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer"
+                className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer" 
               />
             </div>
           </div>
@@ -4765,18 +5402,18 @@ export default function FamilyMembersTab() {
                 step="0.01" 
                 name="payRate" 
                 defaultValue={currentMember?.payRate || 0} 
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" 
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Security PIN (Optional)</label>
               <input 
                 type="text" 
-                maxLength="4"
+                maxLength="4" 
                 name="pin" 
                 defaultValue={currentMember?.pin || ''} 
-                placeholder="e.g. 1234"
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500"
+                placeholder="e.g. 1234" 
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:outline-none focus:border-indigo-500" 
               />
             </div>
           </div>
@@ -4784,13 +5421,13 @@ export default function FamilyMembersTab() {
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
             <button 
               type="button" 
-              onClick={() => setIsEditing(false)}
+              onClick={() => setIsEditing(false)} 
               className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors"
             >
               Cancel
             </button>
             <button 
-              type="submit"
+              type="submit" 
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-sm"
             >
               Save Member
@@ -4815,7 +5452,6 @@ export default function FamilyMembersTab() {
             <Plus className="w-4 h-4" /> Add Member
           </button>
         </div>
-
         <div className="grid gap-3">
           {members.map(member => (
             <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors">
@@ -4833,13 +5469,12 @@ export default function FamilyMembersTab() {
                 <div>
                   <div className="font-bold text-slate-800">{member.name}</div>
                   <div className="text-xs font-medium text-slate-500 flex gap-2">
-                    <span className="uppercase tracking-wider">{member.isKid ? 'Kid' : 'Parent'}</span>
+                    <span className="uppercase tracking-wider">{member.participatesInChores ? 'Kid' : 'Parent'}</span>
                     <span>&bull;</span>
                     <span>Rate: ${member.payRate?.toFixed(2) || '0.00'}</span>
                   </div>
                 </div>
               </div>
-              
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setCurrentMember(member); setIsEditing(true); }}
@@ -4880,7 +5515,6 @@ export default function FamilyMembersTab() {
               </button>
             </div>
           ))}
-          
           <label className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 flex flex-col items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-100 hover:border-indigo-400 transition-colors shadow-sm">
             {uploadingAvatar ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
             <span className="text-[10px] font-bold uppercase tracking-wider mt-1">{uploadingAvatar ? '...' : 'Add'}</span>
@@ -4926,7 +5560,6 @@ export default function FamilyMembersTab() {
     </div>
   );
 }
-
 ```
 
 ### `// src/components/admin/MessageTab.jsx`
@@ -5034,6 +5667,254 @@ export default function MessageTab() {
 }
 ```
 
+### `// src/components/admin/ScheduleManager.jsx`
+
+```javascript
+import { useState, useEffect } from 'react';
+import { CalendarDays, ChevronDown, ChevronUp, AlertCircle, RefreshCcw, Check, X } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { useCustody } from '../../hooks/useCustody';
+import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+
+export default function ScheduleManager() {
+  const { isHereToday, overrides, toggleOverride, clearOverride } = useCustody();
+  const { members, loading } = useFamilyMembers();
+  
+  const [expandedKid, setExpandedKid] = useState(null);
+  
+  // Draft states for the Pattern Builder
+  const [draftAnchor, setDraftAnchor] = useState('');
+  const [draftCycle, setDraftCycle] = useState(14);
+  const [draftPattern, setDraftPattern] = useState([]);
+
+  if (loading) return <div className="p-8 text-center text-slate-500 font-medium animate-pulse">Loading schedules...</div>;
+
+  const kids = members.filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true');
+
+  const openKidSettings = (kid) => {
+    if (expandedKid === kid.id) {
+      setExpandedKid(null);
+      return;
+    }
+    
+    setExpandedKid(kid.id);
+    
+    // Initialize draft state with their current schedule, or default to a blank 14-day cycle
+    const today = new Date();
+    const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    setDraftAnchor(kid.schedule?.referenceDate || isoToday);
+    
+    const existingPattern = kid.schedule?.pattern;
+    if (existingPattern && existingPattern.length > 0) {
+      setDraftCycle(existingPattern.length);
+      setDraftPattern(existingPattern);
+    } else {
+      setDraftCycle(14);
+      setDraftPattern(Array(14).fill(true));
+    }
+  };
+
+  const handleCycleChange = (newLength) => {
+    setDraftCycle(newLength);
+    // Expand or shrink the array while preserving existing choices where possible
+    setDraftPattern(prev => {
+      const newArray = Array(Number(newLength)).fill(true);
+      for (let i = 0; i < Math.min(prev.length, newLength); i++) {
+        newArray[i] = prev[i];
+      }
+      return newArray;
+    });
+  };
+
+  const togglePatternDay = (index) => {
+    setDraftPattern(prev => {
+      const newPattern = [...prev];
+      newPattern[index] = !newPattern[index];
+      return newPattern;
+    });
+  };
+
+  const handleSaveSchedule = async (kidId) => {
+    try {
+      await updateDoc(doc(db, 'familyMembers', kidId), { 
+        schedule: {
+          referenceDate: draftAnchor,
+          pattern: draftPattern
+        } 
+      });
+      setExpandedKid(null);
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      alert("Failed to update schedule.");
+    }
+  };
+
+  // Helper to generate the day names for the Pattern Builder UI
+  const getDayLabel = (anchorString, offsetDays) => {
+    if (!anchorString) return 'Day';
+    const [y, m, d] = anchorString.split('-');
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + offsetDays);
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
+      <div className="bg-slate-50 border-b-2 border-slate-200 p-4 flex items-center gap-3">
+        <CalendarDays className="w-6 h-6 text-indigo-600" />
+        <h3 className="font-bold text-lg text-slate-800">Custody & Schedules</h3>
+      </div>
+
+      <div className="p-4 flex flex-col gap-4">
+        <div className="flex items-start gap-2 bg-indigo-50 text-indigo-700 p-3 rounded-xl border border-indigo-100">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p className="text-xs font-medium">
+            Overrides are strictly for <b>today</b> and will automatically clear at midnight. The infinite schedule builder determines the baseline flow.
+          </p>
+        </div>
+
+        {kids.map(kid => {
+          const hereToday = isHereToday(kid);
+          const hasOverride = overrides[kid.id] !== undefined;
+          const displayColor = kid.color || '#6366f1';
+          const isExpanded = expandedKid === kid.id;
+
+          return (
+            <div key={kid.id} className="border-2 rounded-xl overflow-hidden transition-colors" style={{ borderColor: `${displayColor}33` }}>
+              
+              {/* Main Status Row */}
+              <div className="p-4 flex items-center justify-between" style={{ backgroundColor: hereToday ? `${displayColor}11` : '#fee2e2' }}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                    style={{ backgroundColor: displayColor }}
+                  >
+                    {kid.avatar ? <img src={kid.avatar} alt={kid.name} className="w-full h-full rounded-full object-cover" /> : kid.name[0]}
+                  </div>
+                  
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-800 truncate flex items-center gap-2">
+                      {kid.name}
+                      {hasOverride && (
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
+                          OVERRIDDEN
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-xs font-bold ${hereToday ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {hereToday ? '✅ Scheduled: Here' : '❌ Scheduled: Away'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {hasOverride ? (
+                    <button 
+                      onClick={() => clearOverride(kid.id)}
+                      className="flex items-center gap-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5" /> Reset
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => toggleOverride(kid.id, hereToday)}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors shadow-sm text-white ${hereToday ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+                    >
+                      {hereToday ? 'Set Away' : 'Set Here'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Base Schedule Settings Accordion */}
+              <button 
+                onClick={() => openKidSettings(kid)}
+                className="w-full flex items-center justify-center gap-1 py-2 bg-white border-t border-slate-100 text-xs font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {isExpanded ? 'Close Builder' : 'Open Pattern Builder'}
+              </button>
+
+              {isExpanded && (
+                <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col gap-6">
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">1. Pick an Anchor Date</label>
+                      <input 
+                        type="date" 
+                        value={draftAnchor}
+                        onChange={(e) => setDraftAnchor(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">2. Cycle Length</label>
+                      <select 
+                        value={draftCycle}
+                        onChange={(e) => handleCycleChange(Number(e.target.value))}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value={7}>7 Days (1 Week)</option>
+                        <option value={14}>14 Days (2 Weeks)</option>
+                        <option value={21}>21 Days (3 Weeks)</option>
+                        <option value={28}>28 Days (4 Weeks)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-3 block flex items-center justify-between">
+                      <span>3. Build the Repeating Pattern</span>
+                      <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full normal-case">
+                        Starts on {draftAnchor ? getDayLabel(draftAnchor, 0) : 'selected date'}
+                      </span>
+                    </label>
+                    
+                    <div className="grid grid-cols-7 gap-1.5 bg-white p-3 rounded-xl border border-slate-200 shadow-inner">
+                      {draftPattern.map((isHere, index) => {
+                        const dayName = getDayLabel(draftAnchor, index);
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => togglePatternDay(index)}
+                            className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${
+                              isHere 
+                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-sm' 
+                                : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <span className="text-[10px] font-bold uppercase mb-1">{dayName}</span>
+                            {isHere ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button 
+                      onClick={() => handleSaveSchedule(kid.id)}
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-md"
+                    >
+                      Save Infinite Schedule
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+```
+
 ### `// src/components/admin/SystemToolsTab.jsx`
 
 ```javascript
@@ -5109,13 +5990,13 @@ export default function SystemToolsTab() {
 ### `// src/components/admin/ThemeTab.jsx`
 
 ```javascript
+// src/components/admin/ThemeTab.jsx
 import { useState, useEffect } from 'react';
-import { PartyPopper, Save, Play, Plus, Trash2, Image as ImageIcon, UploadCloud, Type, Palette } from 'lucide-react';
+import { PartyPopper, Save, Play, Plus, Trash2, Image as ImageIcon, UploadCloud, Type, Palette, Wand2, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { useCelebration } from '../../hooks/useCelebration';
 import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../../hooks/useTheme';
-
-const IMAGE_WORKER_URL = "https://schell-calendar-images.matthew-schell.workers.dev";
-const IMAGE_UPLOAD_SECRET = "schell-calendar-2026";
+import { compressImage } from '../../utils/imageCompression';
+import { uploadToCloudflare } from '../../utils/cloudflareUploader';
 
 const EFFECTS = [
   { id: 'realistic-burst', label: '💥 Realistic Burst (Explode & Fall)' },
@@ -5123,7 +6004,7 @@ const EFFECTS = [
   { id: 'fireworks', label: '⭐ Giant Stars' },
   { id: 'rain', label: '🎊 Confetti Rain' },
   { id: 'snow', label: '❄️ Drifting Snow' },
-  { id: 'center-burst', label: '🎇 Center Spinner' }
+  { id: 'center-burst', label: '🎆 Center Spinner' }
 ];
 
 const CELEB_PALETTES = [
@@ -5139,19 +6020,26 @@ export default function ThemeTab() {
   const { settings: celebSettings, loading: celebLoading, saveSettings: saveCeleb, triggerCelebration } = useCelebration();
   const { theme, loading: themeLoading, saveTheme } = useTheme();
   
+  const [activeTab, setActiveTab] = useState('theme');
+
   const [celebForm, setCelebForm] = useState(celebSettings);
   const [themeForm, setThemeForm] = useState(theme);
   const [wallpaperFile, setWallpaperFile] = useState(null);
   
+  // Save States
   const [isSavingCeleb, setIsSavingCeleb] = useState(false);
+  const [celebSaved, setCelebSaved] = useState(false);
+  
   const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [themeSaved, setThemeSaved] = useState(false);
+
+  const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
 
   useEffect(() => { setCelebForm(celebSettings); }, [celebSettings]);
   useEffect(() => { setThemeForm(theme); }, [theme]);
 
   if (celebLoading || themeLoading) return <div className="animate-pulse">Loading settings...</div>;
 
-  // --- Theme Live Preview Construction ---
   const activePreset = THEME_PRESETS.find(p => p.id === themeForm.preset) || THEME_PRESETS[0];
   const isCustom = themeForm.preset === 'custom';
   
@@ -5172,86 +6060,62 @@ export default function ThemeTab() {
   const panelRgba = `rgba(255, 255, 255, ${(themeForm.panelOpacity ?? 90) / 100})`;
   const panelBlur = `${themeForm.panelBlur ?? 8}px`;
 
-  // --- Cloudflare Image Uploader ---
-  const compressAndUploadImage = async (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = async () => {
-          const maxWidth = 1920; 
-          const maxHeight = 1080;
-          let width = img.width;
-          let height = img.height;
+  const localOverrideActive = localOverride !== null && localOverride !== '';
+  const effectiveDesktopPos = localOverrideActive ? localOverride : (themeForm.bgPositionDesktop ?? 50);
+  const effectiveMobilePos = localOverrideActive ? localOverride : (themeForm.bgPositionMobile ?? 50);
 
-          if (width > height && width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(async (blob) => {
-            const safeName = "wallpaper-" + Date.now() + ".jpg";
-            const formData = new FormData();
-            formData.append('file', blob, safeName);
-            try {
-              const res = await fetch(`${IMAGE_WORKER_URL}/upload`, {
-                method: 'POST',
-                headers: { 'X-Upload-Secret': IMAGE_UPLOAD_SECRET },
-                body: formData,
-              });
-              const data = await res.json();
-              if (data.url) resolve(data.url);
-              else reject(new Error('Upload failed'));
-            } catch (err) { reject(err); }
-          }, 'image/jpeg', 0.85);
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
+  const applyLocalOverride = (val) => {
+    setLocalOverride(val);
+    if (val !== null && val !== '') {
+      localStorage.setItem('bgPositionOverride', val);
+      window.dispatchEvent(new Event('localBgOverrideChanged'));
+    } else {
+      localStorage.removeItem('bgPositionOverride');
+      window.dispatchEvent(new Event('localBgOverrideChanged'));
+    }
   };
 
   const handleSaveTheme = async () => {
     setIsSavingTheme(true);
     try {
       let finalUrl = themeForm.bgImageUrl;
+      
       if (wallpaperFile) {
-        finalUrl = await compressAndUploadImage(wallpaperFile);
+        const optimizedBlob = await compressImage(wallpaperFile, 1920, 1080, 0.85);
+        finalUrl = await uploadToCloudflare(optimizedBlob, `app_background_${Date.now()}.jpg`);
       }
+
       await saveTheme({ ...themeForm, bgImageUrl: finalUrl });
+      
       setWallpaperFile(null);
+      const bgInput = document.getElementById('theme-bg-upload');
+      if (bgInput) bgInput.value = '';
+
+      setThemeSaved(true);
+      setTimeout(() => setThemeSaved(false), 2000);
     } catch (e) {
+      console.error("Failed to upload background:", e);
       alert("Failed to upload wallpaper");
     }
     setIsSavingTheme(false);
   };
 
-  // --- Hold to Preview Functions ---
   const handlePreviewStart = () => {
     const modal = document.getElementById('admin-modal-container');
     if (modal) modal.style.opacity = '0';
   };
+  
   const handlePreviewEnd = () => {
     const modal = document.getElementById('admin-modal-container');
     if (modal) modal.style.opacity = '1';
   };
 
-  // --- Celebration Functions ---
   const handleSaveCeleb = async () => {
     setIsSavingCeleb(true);
     await saveCeleb(celebForm);
     setIsSavingCeleb(false);
+    setCelebSaved(true);
+    setTimeout(() => setCelebSaved(false), 2000);
   };
 
   const addLayer = () => {
@@ -5272,9 +6136,7 @@ export default function ThemeTab() {
   };
 
   return (
-    <div className="space-y-10 max-w-2xl pb-12">
-      
-      {/* Live Preview Style Injection overrides Home.jsx! */}
+    <div className="space-y-6 max-w-2xl pb-12">
       <style>{`
         body {
           ${bgStyle}
@@ -5282,8 +6144,8 @@ export default function ThemeTab() {
           background-attachment: fixed;
           font-family: ${activeFont.css};
         }
-        @media (min-width: 768px) { body { background-position: center ${themeForm.bgPositionDesktop ?? 50}%; } }
-        @media (max-width: 767px) { body { background-position: ${themeForm.bgPositionMobile ?? 50}% center; } }
+        @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
+        @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
         :root {
           --glass-panel-bg: ${panelRgba} !important;
           --glass-panel-blur: blur(${panelBlur}) !important;
@@ -5291,217 +6153,269 @@ export default function ThemeTab() {
         }
       `}</style>
       
-      {/* APP THEME BUILDER */}
-      <section className="space-y-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-xl font-bold mb-1 text-slate-800 flex items-center gap-2">
-              <Palette className="text-sky-500" /> App Theme Builder
-            </h3>
-            <p className="text-slate-500 text-sm">Select presets or fully customize your family layout.</p>
-          </div>
-          
-          <button 
-            onMouseDown={handlePreviewStart} 
-            onMouseUp={handlePreviewEnd} 
-            onMouseLeave={handlePreviewEnd}
-            onTouchStart={handlePreviewStart}
-            onTouchEnd={handlePreviewEnd}
-            className="py-2 px-4 bg-slate-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900 transition-colors shadow-lg cursor-pointer select-none"
-          >
-            👁️ Hold to Preview
-          </button>
-        </div>
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6 border border-slate-200 shadow-inner">
+        <button 
+          onClick={() => setActiveTab('theme')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'theme' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <Palette className="w-4 h-4" /> App Theme
+        </button>
+        <button 
+          onClick={() => setActiveTab('celebration')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'celebration' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <Wand2 className="w-4 h-4" /> Celebration FX
+        </button>
+      </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm space-y-6">
-          
-          {/* Presets Map */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Preset Themes</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {THEME_PRESETS.map(p => (
-                <button 
-                  key={p.id} 
-                  onClick={() => setThemeForm({ ...themeForm, preset: p.id })}
-                  className={`p-2 rounded-xl text-sm font-bold border-2 transition-all ${themeForm.preset === p.id ? 'border-sky-500 ring-2 ring-sky-100' : 'border-transparent hover:border-slate-200'}`}
-                  style={{ background: p.bg || '#e2e8f0', color: p.font }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {isCustom && (
-            <div className="bg-sky-50 border-2 border-sky-100 p-4 rounded-xl space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Custom Background Image</label>
-                <input 
-                  type="file" accept="image/*" 
-                  onChange={e => setWallpaperFile(e.target.files[0])} 
-                  className="w-full p-2 border-2 border-white rounded-xl bg-white mb-2 focus:outline-none file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer"
-                />
-                {(themeForm.bgImageUrl || wallpaperFile) && (
-                   <button onClick={() => { setThemeForm({...themeForm, bgImageUrl: ''}); setWallpaperFile(null); }} className="text-xs font-bold text-red-500 hover:text-red-700">
-                     ✕ Remove Background
-                   </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fallback Background Color</label>
-                  <input type="color" value={themeForm.bgColor || '#667eea'} onChange={e => setThemeForm({ ...themeForm, bgColor: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Calendar Font Color</label>
-                  <input type="color" value={themeForm.fontColor || '#1f2937'} onChange={e => setThemeForm({ ...themeForm, fontColor: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Typography */}
-          <div>
-            <label className="flex text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 items-center gap-1"><Type className="w-4 h-4"/> Global Font Style</label>
-            <div className="grid grid-cols-2 gap-2">
-              {FONT_OPTIONS.map(f => (
-                <button 
-                  key={f.id} 
-                  onClick={() => setThemeForm({ ...themeForm, fontFamily: f.id })}
-                  className={`p-2 rounded-xl text-sm transition-all border-2 ${themeForm.fontFamily === f.id ? 'border-sky-500 bg-sky-50 text-sky-800 font-bold' : 'border-slate-100 text-slate-600 hover:bg-slate-50'}`}
-                  style={{ fontFamily: f.css }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Glass and Position Sliders */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+      {/* Tab Content: APP THEME BUILDER */}
+      {activeTab === 'theme' && (
+        <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex justify-between items-start">
             <div>
-              <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Panel Opacity</label><span className="text-xs font-bold text-sky-500">{themeForm.panelOpacity}%</span></div>
-              <input type="range" min="10" max="100" step="5" value={themeForm.panelOpacity} onChange={(e) => setThemeForm({...themeForm, panelOpacity: parseInt(e.target.value)})} className="w-full accent-sky-500"/>
-              <p className="text-xs text-slate-400 mt-1">Lower = More transparent</p>
+              <h3 className="text-xl font-bold mb-1 text-slate-800 flex items-center gap-2">
+                Visual Customization
+              </h3>
+              <p className="text-slate-500 text-sm">Select presets or fully customize your family layout.</p>
             </div>
-            <div>
-              <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Glass Blur</label><span className="text-xs font-bold text-sky-500">{themeForm.panelBlur}px</span></div>
-              <input type="range" min="0" max="24" step="2" value={themeForm.panelBlur} onChange={(e) => setThemeForm({...themeForm, panelBlur: parseInt(e.target.value)})} className="w-full accent-sky-500"/>
-              <p className="text-xs text-slate-400 mt-1">Frosted effect to read text easily</p>
-            </div>
-
-            {(themeForm.bgImageUrl || wallpaperFile) && isCustom && (
-              <>
-                <div>
-                  <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Desktop Image Position</label><span className="text-xs font-bold text-sky-500">{themeForm.bgPositionDesktop}%</span></div>
-                  <input type="range" min="0" max="100" value={themeForm.bgPositionDesktop} onChange={(e) => setThemeForm({...themeForm, bgPositionDesktop: parseInt(e.target.value)})} className="w-full accent-sky-500"/>
-                </div>
-                <div>
-                  <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mobile Image Position</label><span className="text-xs font-bold text-sky-500">{themeForm.bgPositionMobile}%</span></div>
-                  <input type="range" min="0" max="100" value={themeForm.bgPositionMobile} onChange={(e) => setThemeForm({...themeForm, bgPositionMobile: parseInt(e.target.value)})} className="w-full accent-sky-500"/>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-slate-100">
+            
             <button 
-              onClick={handleSaveTheme} disabled={isSavingTheme}
-              className="w-full py-3 bg-sky-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors"
+              onMouseDown={handlePreviewStart} 
+              onMouseUp={handlePreviewEnd} 
+              onMouseLeave={handlePreviewEnd}
+              onTouchStart={handlePreviewStart}
+              onTouchEnd={handlePreviewEnd}
+              className="py-2 px-4 bg-slate-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900 transition-colors shadow-lg cursor-pointer select-none"
             >
-              {isSavingTheme ? <UploadCloud className="animate-bounce" /> : <Save className="w-5 h-5" />} 
-              {isSavingTheme ? 'Uploading & Saving...' : 'Save App Theme'}
+              👁️ Hold to Preview
             </button>
           </div>
-        </div>
-      </section>
 
-
-      {/* CELEBRATION MIXER */}
-      <section className="space-y-6 pt-4">
-        <div>
-          <h3 className="text-xl font-bold mb-1 text-slate-800 flex items-center gap-2">
-            <PartyPopper className="text-indigo-500" /> Celebration Engine
-          </h3>
-          <p className="text-slate-500 text-sm">Stack up to 4 effects for task completion popups.</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm space-y-6">
-          <div className="grid grid-cols-2 gap-4 pb-6 border-b-2 border-slate-100">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Duration</label>
-              <select value={celebForm.duration} onChange={e => setCelebForm({ ...celebForm, duration: Number(e.target.value) })} className="w-full p-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 font-bold text-slate-700">
-                <option value={3}>3 Seconds</option>
-                <option value={5}>5 Seconds</option>
-                <option value={8}>8 Seconds (Long)</option>
-              </select>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Preset Themes</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {THEME_PRESETS.map(p => (
+                  <button 
+                    key={p.id} 
+                    onClick={() => setThemeForm({ ...themeForm, preset: p.id })}
+                    className={`p-2 rounded-xl text-sm font-bold border-2 transition-all ${themeForm.preset === p.id ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-transparent hover:border-slate-200'}`}
+                    style={{ background: p.bg || '#e2e8f0', color: p.font }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {isCustom && (
+              <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Custom Background Image</label>
+                  <input 
+                    id="theme-bg-upload"
+                    type="file" accept="image/*" 
+                    onChange={e => setWallpaperFile(e.target.files[0])} 
+                    className="w-full p-2 border-2 border-white rounded-xl bg-white mb-2 focus:outline-none file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                  />
+                  {(themeForm.bgImageUrl || wallpaperFile) && (
+                     <button onClick={() => { 
+                       setThemeForm({...themeForm, bgImageUrl: ''}); 
+                       setWallpaperFile(null);
+                       const el = document.getElementById('theme-bg-upload');
+                       if(el) el.value = '';
+                     }} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1">
+                       <X className="w-3 h-3" /> Remove Background
+                     </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fallback Background Color</label>
+                    <input type="color" value={themeForm.bgColor || '#667eea'} onChange={e => setThemeForm({ ...themeForm, bgColor: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Calendar Font Color</label>
+                    <input type="color" value={themeForm.fontColor || '#1f2937'} onChange={e => setThemeForm({ ...themeForm, fontColor: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Audio Track</label>
-              <select value={celebForm.soundUrl} onChange={e => setCelebForm({ ...celebForm, soundUrl: e.target.value })} className="w-full p-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 font-bold text-slate-700">
-                <option value="">No Sound (Silent)</option>
-                <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Mario%20Bros%20Flagpole.mp3">Mario Level Complete</option>
-                <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Roblox%20celebration.mp3">Roblox Celebration</option>
-                <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/yoshi.mp3">Yoshi!</option>
-              </select>
+              <label className="flex text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 items-center gap-1"><Type className="w-4 h-4"/> Global Font Style</label>
+              <div className="grid grid-cols-2 gap-2">
+                {FONT_OPTIONS.map(f => (
+                  <button 
+                    key={f.id} 
+                    onClick={() => setThemeForm({ ...themeForm, fontFamily: f.id })}
+                    className={`p-2 rounded-xl text-sm transition-all border-2 ${themeForm.fontFamily === f.id ? 'border-indigo-500 bg-indigo-50 text-indigo-800 font-bold' : 'border-slate-100 text-slate-600 hover:bg-slate-50'}`}
+                    style={{ fontFamily: f.css }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+              <div>
+                <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Panel Opacity</label><span className="text-xs font-bold text-indigo-500">{themeForm.panelOpacity}%</span></div>
+                <input type="range" min="10" max="100" step="5" value={themeForm.panelOpacity} onChange={(e) => setThemeForm({...themeForm, panelOpacity: parseInt(e.target.value)})} className="w-full accent-indigo-500"/>
+                <p className="text-xs text-slate-400 mt-1">Lower = More transparent</p>
+              </div>
+              <div>
+                <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Glass Blur</label><span className="text-xs font-bold text-indigo-500">{themeForm.panelBlur}px</span></div>
+                <input type="range" min="0" max="24" step="2" value={themeForm.panelBlur} onChange={(e) => setThemeForm({...themeForm, panelBlur: parseInt(e.target.value)})} className="w-full accent-indigo-500"/>
+                <p className="text-xs text-slate-400 mt-1">Frosted effect to read text easily</p>
+              </div>
+
+              {(themeForm.bgImageUrl || wallpaperFile) && isCustom && (
+                <>
+                  <div>
+                    <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Global Desktop Position</label><span className="text-xs font-bold text-indigo-500">{themeForm.bgPositionDesktop ?? 50}%</span></div>
+                    <input type="range" min="0" max="100" value={themeForm.bgPositionDesktop ?? 50} onChange={(e) => setThemeForm({...themeForm, bgPositionDesktop: parseInt(e.target.value)})} className="w-full accent-indigo-500"/>
+                  </div>
+                  <div>
+                    <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Global Mobile Position</label><span className="text-xs font-bold text-indigo-500">{themeForm.bgPositionMobile ?? 50}%</span></div>
+                    <input type="range" min="0" max="100" value={themeForm.bgPositionMobile ?? 50} onChange={(e) => setThemeForm({...themeForm, bgPositionMobile: parseInt(e.target.value)})} className="w-full accent-indigo-500"/>
+                  </div>
+                  
+                  <div className="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-slate-100 bg-slate-50 p-4 rounded-xl">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider text-emerald-600">🖥️ Local Device Override</label>
+                      {localOverrideActive && (
+                        <button onClick={() => applyLocalOverride('')} className="text-[10px] font-bold text-rose-500 bg-rose-50 border border-rose-200 px-2 py-1 rounded-md shadow-sm hover:bg-rose-100 transition-colors">✕ Clear Override</button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mb-4">Use this slider to adjust the vertical position <b>for this specific monitor only</b>. It writes directly to your browser's local storage and overrides the global position settings above.</p>
+                    
+                    <div className="flex justify-between mb-1">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">This Screen's Override Position</label>
+                      <span className="text-xs font-bold text-emerald-600">{localOverrideActive ? localOverride + '%' : `Inactive`}</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" 
+                      value={localOverrideActive ? localOverride : (themeForm.bgPositionDesktop ?? 50)} 
+                      onChange={(e) => applyLocalOverride(e.target.value)} 
+                      className={`w-full ${localOverrideActive ? 'accent-emerald-500' : 'accent-slate-300 opacity-60'}`}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
+              <button 
+                onClick={handleSaveTheme} 
+                disabled={isSavingTheme || themeSaved}
+                className={`w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm ${
+                  themeSaved ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                {isSavingTheme ? <Loader2 className="w-5 h-5 animate-spin" /> : (themeSaved ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />)} 
+                {isSavingTheme ? 'Uploading & Saving...' : (themeSaved ? 'Theme Saved!' : 'Save App Theme')}
+              </button>
             </div>
           </div>
+        </section>
+      )}
 
-          <div className="space-y-4">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Effect Layers ({celebForm.layers?.length || 0}/4)</label>
-            {(celebForm.layers || []).map((layer, index) => (
-              <div key={index} className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 relative">
-                <button onClick={() => removeLayer(index)} className="absolute top-3 right-3 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
-                <div className="pr-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Effect Type</label>
-                      <select value={layer.type} onChange={(e) => updateLayer(index, 'type', e.target.value)} className="w-full p-2 rounded-lg border border-slate-300 font-bold text-sm text-slate-700">
-                        {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
-                      </select>
+      {/* Tab Content: CELEBRATION MIXER */}
+      {activeTab === 'celebration' && (
+        <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div>
+            <h3 className="text-xl font-bold mb-1 text-slate-800 flex items-center gap-2">
+               Reward Popups
+            </h3>
+            <p className="text-slate-500 text-sm">Stack up to 4 effects for task completion celebrations.</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div className="grid grid-cols-2 gap-4 pb-6 border-b border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Duration</label>
+                <select value={celebForm.duration} onChange={e => setCelebForm({ ...celebForm, duration: Number(e.target.value) })} className="w-full p-3 rounded-xl border border-slate-200 focus:border-indigo-500 font-bold text-slate-700 bg-slate-50 focus:bg-white transition-colors">
+                  <option value={3}>3 Seconds</option>
+                  <option value={5}>5 Seconds</option>
+                  <option value={8}>8 Seconds (Long)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Audio Track</label>
+                <select value={celebForm.soundUrl} onChange={e => setCelebForm({ ...celebForm, soundUrl: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 focus:border-indigo-500 font-bold text-slate-700 bg-slate-50 focus:bg-white transition-colors">
+                  <option value="">No Sound (Silent)</option>
+                  <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Mario%20Bros%20Flagpole.mp3">Mario Level Complete</option>
+                  <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Roblox%20celebration.mp3">Roblox Celebration</option>
+                  <option value="https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/yoshi.mp3">Yoshi!</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Effect Layers ({celebForm.layers?.length || 0}/4)</label>
+              {(celebForm.layers || []).map((layer, index) => (
+                <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl p-4 relative shadow-sm">
+                  <button onClick={() => removeLayer(index)} className="absolute top-3 right-3 text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-md shadow-sm border border-slate-100"><Trash2 className="w-4 h-4" /></button>
+                  <div className="pr-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Effect Type</label>
+                        <select value={layer.type} onChange={(e) => updateLayer(index, 'type', e.target.value)} className="w-full p-2 rounded-lg border border-slate-300 font-bold text-sm text-slate-700 focus:border-indigo-500 focus:outline-none">
+                          {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Color Palette</label>
+                        <select value={JSON.stringify(layer.colors)} onChange={(e) => updateLayer(index, 'colors', JSON.parse(e.target.value))} className="w-full p-2 rounded-lg border border-slate-300 font-bold text-sm text-slate-700 focus:border-indigo-500 focus:outline-none">
+                          {CELEB_PALETTES.map(pal => <option key={pal.id} value={JSON.stringify(pal.colors)}>{pal.label}</option>)}
+                        </select>
+                        <div className="flex h-2 mt-1 rounded overflow-hidden">
+                          {layer.colors.map((c, i) => <div key={i} style={{ backgroundColor: c, flex: 1 }} />)}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Color Palette</label>
-                      <select value={JSON.stringify(layer.colors)} onChange={(e) => updateLayer(index, 'colors', JSON.parse(e.target.value))} className="w-full p-2 rounded-lg border border-slate-300 font-bold text-sm text-slate-700">
-                        {CELEB_PALETTES.map(pal => <option key={pal.id} value={JSON.stringify(pal.colors)}>{pal.label}</option>)}
-                      </select>
-                      <div className="flex h-2 mt-1 rounded overflow-hidden">
-                        {layer.colors.map((c, i) => <div key={i} style={{ backgroundColor: c, flex: 1 }} />)}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 mb-1">Particle Size</label><span className="text-xs font-bold text-indigo-500">{layer.scale}x</span></div>
+                        <input type="range" min="0.5" max="3" step="0.1" value={layer.scale} onChange={(e) => updateLayer(index, 'scale', parseFloat(e.target.value))} className="w-full accent-indigo-500"/>
+                      </div>
+                      <div>
+                        <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 mb-1">Particle Amount</label><span className="text-xs font-bold text-indigo-500">{layer.intensity * 100}%</span></div>
+                        <input type="range" min="0.2" max="2.5" step="0.1" value={layer.intensity} onChange={(e) => updateLayer(index, 'intensity', parseFloat(e.target.value))} className="w-full accent-indigo-500"/>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 mb-1">Particle Size</label><span className="text-xs font-bold text-indigo-500">{layer.scale}x</span></div>
-                      <input type="range" min="0.5" max="3" step="0.1" value={layer.scale} onChange={(e) => updateLayer(index, 'scale', parseFloat(e.target.value))} className="w-full accent-indigo-500"/>
-                    </div>
-                    <div>
-                      <div className="flex justify-between"><label className="block text-xs font-bold text-slate-500 mb-1">Particle Amount</label><span className="text-xs font-bold text-indigo-500">{layer.intensity * 100}%</span></div>
-                      <input type="range" min="0.2" max="2.5" step="0.1" value={layer.intensity} onChange={(e) => updateLayer(index, 'intensity', parseFloat(e.target.value))} className="w-full accent-indigo-500"/>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {(celebForm.layers || []).length < 4 && (
-              <button onClick={addLayer} className="w-full py-4 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 hover:text-indigo-500 hover:border-indigo-300 transition-colors">
-                <Plus className="w-5 h-5" /> Add Effect Layer
+              {(celebForm.layers || []).length < 4 && (
+                <button onClick={addLayer} className="w-full py-4 border-2 border-dashed border-indigo-200 text-indigo-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-50 hover:border-indigo-400 transition-colors">
+                  <Plus className="w-5 h-5" /> Add Effect Layer
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t border-slate-100">
+              <button onClick={() => triggerCelebration(celebForm)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors">
+                <Play className="w-5 h-5 fill-current" /> Preview Blast
               </button>
-            )}
+              <button 
+                onClick={handleSaveCeleb} 
+                disabled={isSavingCeleb || celebSaved} 
+                className={`flex-1 py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm ${
+                  celebSaved ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-emerald-500 hover:bg-emerald-600'
+                }`}
+              >
+                {isSavingCeleb ? <Loader2 className="w-5 h-5 animate-spin" /> : (celebSaved ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />)} 
+                {isSavingCeleb ? 'Saving...' : (celebSaved ? 'Effects Saved!' : 'Save Effects')}
+              </button>
+            </div>
           </div>
-
-          <div className="flex gap-4 pt-4 border-t border-slate-100">
-            <button onClick={() => triggerCelebration(celebForm)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors">
-              <Play className="w-5 h-5 fill-current" /> Preview Blast
-            </button>
-            <button onClick={handleSaveCeleb} disabled={isSavingCeleb} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors">
-              <Save className="w-5 h-5" /> {isSavingCeleb ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
     </div>
   );
@@ -5511,11 +6425,10 @@ export default function ThemeTab() {
 ### `// src/components/admin/WidgetsTab.jsx`
 
 ```javascript
-// src/components/admin/WidgetsTab.jsx
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { MessageSquare, Lightbulb, Trophy, CloudSun, Save, MapPin, Sparkles, Search } from 'lucide-react';
+import { MessageSquare, Lightbulb, Trophy, CloudSun, Save, MapPin, Sparkles, Search, CheckCircle2 } from 'lucide-react';
 import MessageTab from './MessageTab';
 import FactsTab from './FactsTab';
 
@@ -5526,7 +6439,7 @@ function LeaderboardSettings() {
     autoRevertSeconds: 60
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -5541,14 +6454,16 @@ function LeaderboardSettings() {
   }, []);
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaveState('saving');
     try {
-      await setDoc(doc(db, 'settings', 'leaderboard'), config);
+      await setDoc(doc(db, 'settings', 'leaderboard'), config, { merge: true });
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
       console.error("Error saving leaderboard settings:", error);
-      alert("Failed to save settings.");
+      alert(`Failed to save settings: ${error.message}`);
+      setSaveState('idle');
     }
-    setSaving(false);
   };
 
   const toggleTimeframe = (tf) => {
@@ -5614,8 +6529,16 @@ function LeaderboardSettings() {
           />
         </div>
         <div className="pt-4 border-t border-slate-100 flex justify-end">
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
-            <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Settings'}
+          <button 
+            onClick={handleSave}
+            disabled={saveState !== 'idle'}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+              saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-80`}
+          >
+            {saveState === 'saving' && 'Saving...'}
+            {saveState === 'saved' && <><CheckCircle2 className="w-5 h-5" /> Saved!</>}
+            {saveState === 'idle' && <><Save className="w-5 h-5" /> Save Settings</>}
           </button>
         </div>
       </div>
@@ -5633,7 +6556,7 @@ function WeatherSettings() {
     kidFriendly: true
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
 
   const [citySearch, setCitySearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -5682,14 +6605,16 @@ function WeatherSettings() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaveState('saving');
     try {
-      await setDoc(doc(db, 'settings', 'weather'), config);
+      await setDoc(doc(db, 'settings', 'weather'), config, { merge: true });
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
       console.error("Error saving weather settings:", error);
-      alert("Failed to save settings.");
+      alert(`Failed to save settings: ${error.message}`);
+      setSaveState('idle');
     }
-    setSaving(false);
   };
 
   if (loading) return <div className="p-4 animate-pulse">Loading settings...</div>;
@@ -5775,7 +6700,7 @@ function WeatherSettings() {
           </div>
         </div>
 
-        {/* Kid Friendly Toggle - FIXED TAILWIND BRACKETS */}
+        {/* Kid Friendly Toggle */}
         <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
           <div>
             <h4 className="font-bold text-amber-900 flex items-center gap-2">
@@ -5797,10 +6722,14 @@ function WeatherSettings() {
         <div className="pt-4 border-t border-slate-100 flex justify-end">
           <button 
             onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            disabled={saveState !== 'idle'}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+              saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-80`}
           >
-            <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Settings'}
+            {saveState === 'saving' && 'Saving...'}
+            {saveState === 'saved' && <><CheckCircle2 className="w-5 h-5" /> Saved!</>}
+            {saveState === 'idle' && <><Save className="w-5 h-5" /> Save Settings</>}
           </button>
         </div>
       </div>
@@ -5847,7 +6776,7 @@ function SubTabButton({ active, onClick, icon, label }) {
 ### `// src/components/calendar/CalendarGrid.jsx`
 
 ```javascript
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
@@ -5858,6 +6787,9 @@ import DayViewModal from './DayViewModal';
 export default function CalendarGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
   
+  // FIX: Track the real today string to force re-renders at midnight
+  const [realTodayStr, setRealTodayStr] = useState(new Date().toDateString());
+
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isDayViewOpen, setIsDayViewOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -5867,11 +6799,26 @@ export default function CalendarGrid() {
   const { events, loading: eventsLoading, deleteEvent, deleteEventGroup } = useEvents();
   const { members, loading: membersLoading } = useFamilyMembers();
 
+  // Midnight tick observer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = new Date().toDateString();
+      if (current !== realTodayStr) {
+        setRealTodayStr(current);
+        // If the user hasn't explicitly navigated away, auto-flip to the new month if the day crosses a month boundary
+        const now = new Date();
+        if (currentDate.getMonth() === now.getMonth() - 1 || currentDate.getMonth() === now.getMonth() + 11) {
+            setCurrentDate(now);
+        }
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [realTodayStr, currentDate]);
+
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const startingDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
   
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const todayStr = new Date().toDateString();
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -5953,7 +6900,9 @@ export default function CalendarGrid() {
             const day = i + 1;
             const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dateString = dateObj.toDateString();
-            const isToday = dateString === todayStr;
+            
+            // FIX: Rely on the dynamically updating realTodayStr
+            const isToday = dateString === realTodayStr;
 
             const dayEvents = getEventsForDate(dateString);
 
@@ -6500,6 +7449,7 @@ import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 import { useDailyCompletions } from '../../hooks/useDailyCompletions';
 import { useCelebration } from '../../hooks/useCelebration';
+import { useCustody } from '../../hooks/useCustody';
 
 export default function ChoresPanel() {
   const { chores, loading: choresLoading } = useChores();
@@ -6507,6 +7457,7 @@ export default function ChoresPanel() {
   const { completions, loading: compsLoading, toggleCompletion } = useDailyCompletions();
   
   const { triggerCelebration } = useCelebration();
+  const { isHereToday } = useCustody();
   
   const [claimingChore, setClaimingChore] = useState(null);
   const [celebratingKid, setCelebratingKid] = useState(null);
@@ -6519,7 +7470,9 @@ export default function ChoresPanel() {
     );
   }
 
-  const kids = members.filter(m => m.isKid);
+  // MATH FILTER: Completely strip out any kids who are scheduled as "Away" today
+  const kids = members.filter(m => m.participatesInChores && isHereToday(m));
+  
   const assignedChores = chores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
   const bonusChores = chores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
 
@@ -6536,30 +7489,22 @@ export default function ChoresPanel() {
       return;
     }
 
-    // Trigger atomic database update
     toggleCompletion(chore, chore.assignedTo, isDone);
 
-    // If we are CHECKING a chore (it was not done)...
     if (!isDone && chore.assignedTo) {
       const kidChores = assignedChores.filter(c => c.assignedTo === chore.assignedTo);
-      // Check if every other chore for this kid is already in the 'completions' state
       const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
       
       if (allDone && kidChores.length > 0) {
-        // 1. Fire the custom Celebration Engine
         triggerCelebration();
         
-        // 2. Find the kid and trigger the Mission Complete Modal!
         const member = members.find(m => m.id === chore.assignedTo);
         if (member) {
-          // FIX: Manually inject the final chore's points into the snapshot 
-          // so the modal is instantly mathematically accurate without waiting for the database
           setCelebratingKid({
             ...member,
             points: Number(member.points || 0) + Number(chore.points || 0)
           });
           
-          // Auto-dismiss after 15 seconds
           setTimeout(() => setCelebratingKid(null), 15000);
         }
       }
@@ -6568,7 +7513,6 @@ export default function ChoresPanel() {
 
   const handleClaimBonus = (kidId) => {
     toggleCompletion(claimingChore, kidId, false);
-    // Small pop for claiming a bonus
     triggerCelebration({ 
       layers: [{ type: 'fireworks', colors: ['#FFD700', '#FFA500'], scale: 1, intensity: 0.5 }],
       duration: 2,
@@ -6740,9 +7684,8 @@ export default function ChoresPanel() {
 ### `// src/components/dashboard/DailyContent.jsx`
 
 ```javascript
-// src/components/dashboard/DailyContent.jsx
 import { useState, useEffect } from 'react';
-import { CloudSun, Lightbulb, Star, Smile, ChevronDown } from 'lucide-react';
+import { CloudSun, Lightbulb, Star, Smile, ChevronDown, X, Droplets } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useDailyContent } from '../../hooks/useDailyContent';
@@ -6751,7 +7694,9 @@ export default function DailyContent() {
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherConfig, setWeatherConfig] = useState(null);
+  
   const [isForecastExpanded, setIsForecastExpanded] = useState(false);
+  const [selectedDateString, setSelectedDateString] = useState(null);
   
   const { content, loading: contentLoading } = useDailyContent();
 
@@ -6781,13 +7726,8 @@ export default function DailyContent() {
       try {
         const unitParam = weatherConfig.units === 'fahrenheit' ? '&temperature_unit=fahrenheit' : '';
         
-        // We now ALWAYS fetch daily max/min so we can display Today's High/Low
-        const modeParam = weatherConfig.displayMode === 'hourly' 
-          ? '&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=2' 
-          : `&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7`;
-
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${weatherConfig.lat}&longitude=${weatherConfig.lon}&current=temperature_2m,weather_code${unitParam}${modeParam}&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${weatherConfig.lat}&longitude=${weatherConfig.lon}&current=temperature_2m,weather_code${unitParam}&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto&models=gem_seamless`
         );
         const weatherData = await weatherRes.json();
         setWeather(weatherData);
@@ -6807,9 +7747,10 @@ export default function DailyContent() {
     if (code === 2) return '⛅'; 
     if (code === 3) return '☁️'; 
     if (code >= 45 && code <= 48) return '🌫️'; 
-    if (code >= 51 && code <= 67) return '🌧️'; 
+    if (code === 51 || code === 53 || code === 61 || code === 80) return '🌦️'; 
+    if (code === 55 || code === 63 || code === 65 || code === 81 || code === 82) return '🌧️'; 
     if (code >= 71 && code <= 77) return '❄️'; 
-    if (code >= 80 && code <= 82) return '🌦️'; 
+    if (code >= 85 && code <= 86) return '🌨️'; 
     if (code >= 95) return '⛈️'; 
     return '☁️';
   };
@@ -6817,24 +7758,29 @@ export default function DailyContent() {
   const getKidFriendlyAdvice = (code, temp) => {
     if (!weatherConfig?.kidFriendly || code === undefined || temp === undefined) return null;
     
-    const isFahrenheit = weatherConfig.units === 'fahrenheit';
+    const isF = weatherConfig.units === 'fahrenheit';
+    const t = isF ? ((temp - 32) * 5/9) : temp; 
     
-    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 99)) {
-      return { emoji: '☂️', text: 'Grab an umbrella!' };
-    } else if (code >= 71 && code <= 77) {
-      return { emoji: '🧤', text: 'Wear your mittens!' };
+    const isRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95);
+    const isSnow = (code >= 71 && code <= 77) || (code >= 85 && code <= 86);
+
+    if (isSnow) {
+      if (t <= -5) return { emoji: '⛄', text: 'Snow & freezing! Full snow gear.' };
+      return { emoji: '⛄', text: 'Snow day! Wear boots & mitts.' };
+    }
+    
+    if (isRain) {
+      if (t <= 5) return { emoji: '🥶', text: 'Freezing rain! Warm raincoat.' };
+      if (t <= 15) return { emoji: '☂️', text: 'Cold & rainy. Raincoat & boots.' };
+      return { emoji: '☂️', text: 'Rainy! Time for an umbrella.' };
     }
 
-    const coldThreshold = isFahrenheit ? 50 : 10;
-    const hotThreshold = isFahrenheit ? 77 : 25;
-
-    if (temp <= coldThreshold) {
-      return { emoji: '🧥', text: 'You need a jacket!' };
-    } else if (temp >= hotThreshold) {
-      return { emoji: '🕶️', text: "Don't forget sunscreen!" };
-    }
-
-    return null;
+    if (t <= -5) return { emoji: '🧣', text: 'Freezing! Coat, toque & mitts.' };
+    if (t <= 5) return { emoji: '🧥', text: 'Very chilly! Wear a warm coat.' };
+    if (t <= 12) return { emoji: '🧥', text: 'Cool out! Bring a light jacket.' };
+    if (t <= 18) return { emoji: '👕', text: 'Nice out! Light sweater weather.' };
+    if (t <= 24) return { emoji: '🩳', text: 'Warm! T-shirt & shorts weather.' };
+    return { emoji: '😎', text: 'Hot! Sunscreen, hat & lots of water!' };
   };
 
   const formatDay = (isoString) => {
@@ -6842,9 +7788,13 @@ export default function DailyContent() {
     return d.toLocaleDateString('en-US', { weekday: 'short' });
   };
 
-  const formatHour = (isoString) => {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }).replace(' ', '').toLowerCase();
+  const formatHourAmPm = (timeString) => {
+    const d = new Date(timeString);
+    let hour = d.getHours();
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    hour = hour % 12;
+    hour = hour ? hour : 12; 
+    return `${hour}${ampm}`;
   };
 
   if (weatherLoading || contentLoading || !weatherConfig) {
@@ -6866,110 +7816,171 @@ export default function DailyContent() {
   const currentTemp = Math.round(weather?.current?.temperature_2m || 0);
   const todayMax = weather?.daily?.temperature_2m_max?.[0] !== undefined ? Math.round(weather.daily.temperature_2m_max[0]) : '--';
   const todayMin = weather?.daily?.temperature_2m_min?.[0] !== undefined ? Math.round(weather.daily.temperature_2m_min[0]) : '--';
+  const todayPop = weather?.daily?.precipitation_probability_max?.[0] || 0;
   
   const tempUnit = weatherConfig.units === 'fahrenheit' ? '°F' : '°C';
   const advice = weather ? getKidFriendlyAdvice(weather?.current?.weather_code, currentTemp) : null;
 
-  let forecastData = [];
-  if (weatherConfig.displayMode === 'hourly' && weather?.hourly) {
-    const nowTime = new Date().getTime();
-    const startIndex = weather.hourly.time.findIndex(t => new Date(t).getTime() > nowTime - 3600000);
-    const start = startIndex > -1 ? startIndex : 0;
-    forecastData = weather.hourly.time.slice(start, start + 6).map((time, i) => ({
-      label: i === 0 ? 'Now' : formatHour(time),
-      temp: Math.round(weather.hourly.temperature_2m[start + i]),
-      code: weather.hourly.weather_code[start + i]
-    }));
-  } else if (weatherConfig.displayMode === 'daily' && weather?.daily) {
-    // Skip today (index 0) and show the next 6 days
-    forecastData = weather.daily.time.slice(1, 7).map((time, i) => ({
-      label: formatDay(time),
-      temp: Math.round(weather.daily.temperature_2m_max[i + 1]),
-      code: weather.daily.weather_code[i + 1]
-    }));
+  const dailyForecast = weather?.daily?.time.slice(1, 7).map((time, i) => ({
+    dateString: time,
+    label: formatDay(time),
+    temp: Math.round(weather.daily.temperature_2m_max[i + 1]),
+    code: weather.daily.weather_code[i + 1],
+    pop: weather.daily.precipitation_probability_max?.[i + 1] || 0
+  })) || [];
+
+  let hourlyForecast = [];
+  if (selectedDateString && weather?.hourly) {
+    hourlyForecast = weather.hourly.time
+      .map((t, idx) => ({
+        time: t,
+        temp: Math.round(weather.hourly.temperature_2m[idx]),
+        code: weather.hourly.weather_code[idx],
+        pop: weather.hourly.precipitation_probability?.[idx] || 0
+      }))
+      .filter(d => d.time.startsWith(selectedDateString))
+      .filter(d => [8, 12, 16, 20].includes(new Date(d.time).getHours()));
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-linear-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col">
-        
-        {/* Top Header Row with Expand Toggle */}
-        <div className="relative z-10 flex items-center justify-between mb-3">
-          <h3 className="text-sky-100 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
-            <CloudSun className="w-4 h-4" /> Local Weather
-          </h3>
-          {forecastData.length > 0 && (
+      {/* WEATHER WIDGET */}
+      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col">
+        <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        {/* Header - Inline Layout */}
+        <div className="flex items-center justify-between mb-3 relative z-10">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sky-100 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <CloudSun className="w-4 h-4" /> Local Weather
+            </h3>
+            <span className="text-white/30 text-[10px]">•</span>
+            <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wide">{weatherConfig.city}</span>
+          </div>
+
+          {/* Inline Expand Button with Invisible Padding */}
+          {dailyForecast.length > 0 && (
             <button 
-              onClick={() => setIsForecastExpanded(!isForecastExpanded)}
-              className="text-sky-100 hover:text-white transition-colors focus:outline-none flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded-md"
+              onClick={() => {
+                setIsForecastExpanded(!isForecastExpanded);
+                if (isForecastExpanded) setSelectedDateString(null);
+              }}
+              className="p-3 -m-3 focus:outline-none group"
+              aria-label="Toggle Forecast"
             >
-              {weatherConfig.displayMode === 'hourly' ? 'Hours' : '6-Day'}
-              <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isForecastExpanded ? 'rotate-180' : ''}`} />
+              <div className="bg-white/10 group-hover:bg-white/20 px-2 py-1 rounded-md flex items-center gap-1.5 transition-colors text-sky-50 text-[10px] font-bold uppercase tracking-wider">
+                {weatherConfig.displayMode === 'hourly' ? 'Hours' : '6-Day'}
+                <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isForecastExpanded ? 'rotate-180' : ''}`} />
+              </div>
             </button>
           )}
         </div>
 
-        {/* Main Weather Row */}
-        <div className="relative z-10 flex items-center justify-between w-full">
+        {/* PERFECT HORIZONTAL ALIGNMENT */}
+        <div className="relative z-10 flex items-center w-full mt-1">
           
-          {/* Temperature, City & Today's High/Low */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex flex-col justify-center">
-              <div className="text-5xl font-bold flex items-start tracking-tighter leading-none">
-                {currentTemp}
-                <span className="text-xl text-sky-100 font-semibold tracking-normal mt-1 ml-0.5">{tempUnit}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <div className="text-sky-100 text-[10px] md:text-xs uppercase tracking-wider font-medium truncate max-w-[80px] md:max-w-[100px]">
-                  {weatherConfig.city}
-                </div>
-                <div className="text-sky-100 text-[12px] font-bold tracking-wider px-1.5 py-0.5 bg-white/10 rounded-md">
-                  H:{todayMax}° L:{todayMin}°
-                </div>
-              </div>
+          {/* LEFT: Temp & High/Low */}
+          <div className="flex flex-col justify-center shrink-0 w-[90px] md:w-[110px]">
+            <div className="text-5xl md:text-6xl font-black tracking-tighter leading-none flex items-start">
+              {currentTemp}<span className="text-xl md:text-2xl text-sky-200 font-bold ml-0.5 mt-1">{tempUnit}</span>
             </div>
-            
-            {advice && (
-              <div className="text-6xl drop-shadow-md leading-none ml-1">
-                {getWeatherEmoji(weather?.current?.weather_code)}
+            <div className="text-[10px] md:text-xs font-bold text-sky-200 mt-1.5 bg-white/10 w-fit px-1.5 py-0.5 rounded-md flex items-center">
+              H:{todayMax}° L:{todayMin}°
+              {todayPop >= 20 && (
+                <span className="flex items-center ml-1 border-l border-sky-200/30 pl-1">
+                  <Droplets className="w-2.5 h-2.5 mr-0.5" />{todayPop}%
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* MIDDLE: Weather Emoji */}
+          <div className="text-6xl drop-shadow-xl shrink-0 ml-4 md:ml-6 flex items-center justify-center">
+            {getWeatherEmoji(weather?.current?.weather_code)}
+          </div>
+
+          {/* Vertical Divider & Smart Advice */}
+          {advice && (
+            <>
+              <div className="w-px h-14 bg-white/30 mx-4 md:mx-6 shrink-0"></div>
+              
+              <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                <div className="text-6xl drop-shadow-md shrink-0">
+                  {advice.emoji}
+                </div>
+                <div className="text-[10px] md:text-xs font-bold leading-tight text-center sm:text-left text-white max-w-[130px]">
+                  {advice.text}
+                </div>
+              </div>
+            </>
+          )}
+
+        </div>
+
+        {/* EXPANDED FORECAST CONTAINER */}
+        {isForecastExpanded && (
+          <div className="mt-4 bg-white/10 rounded-xl p-3 overflow-hidden relative z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+            {selectedDateString ? (
+              /* HOURLY DRILL-DOWN VIEW */
+              <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider">
+                    Hourly • {formatDay(selectedDateString)}
+                  </span>
+                  <button 
+                    onClick={() => setSelectedDateString(null)}
+                    className="bg-white/20 hover:bg-white/30 rounded-full p-1 transition-colors"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+                <div className="flex justify-between w-full px-1">
+                  {hourlyForecast.map((data, idx) => (
+                    <div key={idx} className="flex flex-col items-center text-center">
+                      <span className="text-[10px] text-sky-100 font-bold uppercase">{formatHourAmPm(data.time)}</span>
+                      <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm">{getWeatherEmoji(data.code)}</span>
+                      {/* POP Indicator */}
+                      {data.pop >= 20 ? (
+                        <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
+                          <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
+                        </span>
+                      ) : (
+                        <span className="h-[14px] mb-1"></span>
+                      )}
+                      <span className="text-sm font-bold text-white">{data.temp}°</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* DEFAULT 6-DAY VIEW */
+              <div className="flex justify-between w-full animate-in fade-in slide-in-from-left-4 duration-300">
+                {dailyForecast.map((data, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => setSelectedDateString(data.dateString)}
+                    className="flex flex-col items-center text-center cursor-pointer hover:bg-white/20 p-2 -m-1 rounded-xl transition-colors group flex-1"
+                  >
+                    <span className="text-[10px] text-sky-100 font-bold uppercase tracking-wider group-hover:text-white transition-colors">{data.label}</span>
+                    <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm group-hover:scale-110 transition-transform">{getWeatherEmoji(data.code)}</span>
+                    {/* POP Indicator */}
+                    {data.pop >= 20 ? (
+                      <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
+                        <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
+                      </span>
+                    ) : (
+                      <span className="h-[14px] mb-1"></span>
+                    )}
+                    <span className="text-sm font-bold text-white">{data.temp}°</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-
-          {/* Right Side: Advice (if active) OR Right-aligned Icon (if disabled) */}
-          {advice ? (
-            <div className="flex items-center flex-1 justify-center sm:justify-start border-l border-white/30 pl-3 sm:pl-5 ml-2 sm:ml-4 h-14">
-              <div className="text-5xl md:text-6xl drop-shadow-md leading-none shrink-0 mr-2 sm:mr-3">
-                {advice.emoji}
-              </div>
-              <div className="text-white font-bold text-sm sm:text-base md:text-lg leading-tight text-left">
-                {advice.text}
-              </div>
-            </div>
-          ) : (
-            <div className="text-6xl drop-shadow-md leading-none shrink-0">
-              {getWeatherEmoji(weather?.current?.weather_code)}
-            </div>
-          )}
-        </div>
-
-        {/* Expandable Forecast Section */}
-        {isForecastExpanded && forecastData.length > 0 && (
-          <div className="relative z-10 mt-4 pt-4 border-t border-white/20 flex justify-between animate-in fade-in slide-in-from-top-2 duration-300">
-            {forecastData.map((data, idx) => (
-              <div key={idx} className="flex flex-col items-center text-center">
-                <span className="text-[10px] text-sky-100 font-bold uppercase tracking-wider">{data.label}</span>
-                <span className="text-2xl my-1 drop-shadow-sm">{getWeatherEmoji(data.code)}</span>
-                <span className="text-sm font-bold text-white">{data.temp}°</span>
-              </div>
-            ))}
-          </div>
         )}
-
-        {/* Decorative Background Glow */}
-        <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
+      {/* FACT OF THE DAY */}
       <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${config.border}`}>
         <h3 className={`${config.text} font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2`}>
           {config.icon} {config.title}
@@ -6984,12 +7995,12 @@ export default function DailyContent() {
 ### `// src/components/dashboard/Leaderboard.jsx`
 
 ```javascript
-// src/components/dashboard/Leaderboard.jsx
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, AlertCircle, Clock } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
+import { useMidnightTick } from '../../hooks/useMidnightTick';
 import MemberProfileModal from './MemberProfileModal';
 
 export default function Leaderboard() {
@@ -7005,21 +8016,17 @@ export default function Leaderboard() {
   
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
-  
-  // State for our new Profile Modal
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // Fetch config once
+  const todayStr = useMidnightTick();
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'leaderboard'), (docSnap) => {
-      if (docSnap.exists()) {
-        setWidgetConfig(docSnap.data());
-      }
+      if (docSnap.exists()) setWidgetConfig(docSnap.data());
     });
     return () => unsub();
   }, []);
 
-  // Ensure timeframe is valid based on config
   useEffect(() => {
     if (!widgetConfig.enabledTimeframes.includes(timeframe)) {
       setTimeframe(widgetConfig.defaultTimeframe || 'daily');
@@ -7053,20 +8060,31 @@ export default function Leaderboard() {
     setScoresLoading(true);
     const now = new Date();
     let startDate = new Date();
+    let endDate = new Date();
     
     if (timeframe === 'daily') {
       startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
     } else if (timeframe === 'weekly') {
-      // ALIGNED: Set start date strictly to Sunday of the current week
       startDate.setDate(now.getDate() - now.getDay());
       startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
     } else if (timeframe === 'monthly') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (timeframe === 'yearly') {
       startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    const q = query(collection(db, 'completions'), where('timestamp', '>=', startDate));
+    const q = query(
+      collection(db, 'completions'), 
+      where('timestamp', '>=', startDate),
+      where('timestamp', '<=', endDate)
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const calculatedScores = {};
       snapshot.forEach(doc => {
@@ -7080,23 +8098,12 @@ export default function Leaderboard() {
     });
 
     return () => unsubscribe();
-  }, [timeframe]);
+  }, [timeframe, todayStr]); 
 
-  if (membersLoading) {
-    return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg animate-pulse min-h-100 shrink-0">
-        <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
-        <div className="space-y-3">
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-          <div className="h-14 bg-slate-100 rounded-xl"></div>
-        </div>
-      </div>
-    );
-  }
+  if (membersLoading) return null; // Simplified for brevity
 
   const kids = members
-    .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
+    .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
     .map(kid => ({
       ...kid,
       displayPoints: timeframe === 'lifetime' ? (Number(kid.points) || 0) : (scores[kid.id] || 0)
@@ -7111,8 +8118,7 @@ export default function Leaderboard() {
       
       <div className="flex flex-col mb-4 relative z-10 shrink-0 items-center text-center">
         <h2 className="text-2xl font-bold text-amber-600 flex items-center gap-2 capitalize">
-          <Trophy className="text-amber-500 w-7 h-7" /> 
-          Live {timeframe} Leaderboard
+          <Trophy className="text-amber-500 w-7 h-7" /> Live {timeframe} Leaderboard
         </h2>
         
         <div className="h-6 mt-1 flex items-center justify-center w-full">
@@ -7190,9 +8196,7 @@ export default function Leaderboard() {
                 </div>
                 
                 <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 shrink-0">
-                  <span className="font-black text-slate-800 text-xl">
-                    {kid.displayPoints}
-                  </span>
+                  <span className="font-black text-slate-800 text-xl">{kid.displayPoints}</span>
                   {MedalIcon && <MedalIcon className={`drop-shadow-sm w-6 h-6 ${medalColor}`} />}
                 </div>
               </div>
@@ -7201,11 +8205,7 @@ export default function Leaderboard() {
         )}
       </div>
 
-      <MemberProfileModal 
-        member={selectedMember} 
-        onClose={() => setSelectedMember(null)} 
-      />
-
+      <MemberProfileModal member={selectedMember} onClose={() => setSelectedMember(null)} />
     </div>
   );
 }
@@ -7214,30 +8214,34 @@ export default function Leaderboard() {
 ### `// src/components/dashboard/MemberProfileModal.jsx`
 
 ```javascript
+// src/components/dashboard/MemberProfileModal.jsx
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Image as ImageIcon, Wallet, Star, Loader2, UserCircle, History, DollarSign, Volume2, ChevronLeft, ChevronRight, BarChart3, LineChart } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Wallet, Star, Loader2, UserCircle, History, BarChart3, LineChart, ChevronLeft, ChevronRight, RotateCcw, Volume2 } from 'lucide-react';
 import { doc, updateDoc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
+import { compressImage } from '../../utils/imageCompression';
+import { uploadToCloudflare } from '../../utils/cloudflareUploader';
 
 export default function MemberProfileModal({ member, onClose }) {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   
+  // Instant visual update state for the avatar
+  const [previewAvatar, setPreviewAvatar] = useState('');
+
   // Settings Data
   const [defaultAvatars, setDefaultAvatars] = useState([]);
   const [soundOptions, setSoundOptions] = useState([]);
-  const [allowanceConfig, setAllowanceConfig] = useState({ payDay: 5 });
-  
+  const [allowanceConfig, setAllowanceConfig] = useState({ payDay: 5 }); 
+
   // History State
   const [historyData, setHistoryData] = useState([]);
-  const [weeklyPoints, setWeeklyPoints] = useState(0);
-  
+  const [timeframePoints, setTimeframePoints] = useState(0);
+
   // Chart Controls
   const [chartType, setChartType] = useState('bar');
   const [historyTimeframe, setHistoryTimeframe] = useState('weekly');
-  
   const [referenceDate, setReferenceDate] = useState(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -7245,11 +8249,14 @@ export default function MemberProfileModal({ member, onClose }) {
   });
 
   useEffect(() => {
+    if (member?.avatar) setPreviewAvatar(member.avatar);
+  }, [member?.avatar]);
+
+  useEffect(() => {
     if (!isEditing) return;
     const fetchLibraries = async () => {
       const avatarSnap = await getDoc(doc(db, 'settings', 'avatars'));
       if (avatarSnap.exists() && avatarSnap.data().urls) setDefaultAvatars(avatarSnap.data().urls);
-
       const soundSnap = await getDoc(doc(db, 'settings', 'sounds'));
       if (soundSnap.exists() && soundSnap.data().items) setSoundOptions(soundSnap.data().items);
     };
@@ -7266,11 +8273,6 @@ export default function MemberProfileModal({ member, onClose }) {
   useEffect(() => {
     if (!member) return;
 
-    const actualToday = new Date();
-    const actualStartOfWeek = new Date(actualToday);
-    actualStartOfWeek.setDate(actualToday.getDate() - actualToday.getDay());
-    actualStartOfWeek.setHours(0, 0, 0, 0);
-
     let startOfRange = new Date(referenceDate);
     let endOfRange = new Date(referenceDate);
 
@@ -7282,26 +8284,22 @@ export default function MemberProfileModal({ member, onClose }) {
       startOfRange = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
       endOfRange = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
     }
+
     startOfRange.setHours(0, 0, 0, 0);
     endOfRange.setHours(23, 59, 59, 999);
 
-    // Query all completions by this member, and filter by date in memory
-    // This avoids needing a composite index in Firestore!
     const q = query(collection(db, 'completions'), where('completedBy', '==', member.id));
-    
     const unsub = onSnapshot(q, (snapshot) => {
-      let currentWeekPts = 0;
+      let currentRangePts = 0;
       const dailyMap = {};
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
       const daysInRange = historyTimeframe === 'weekly' ? 7 : endOfRange.getDate();
-      
+
       for (let i = 0; i < daysInRange; i++) {
         const d = new Date(startOfRange);
         d.setDate(startOfRange.getDate() + i);
         const isPayDay = d.getDay() === (allowanceConfig.payDay ?? 5);
         const dayLabel = historyTimeframe === 'weekly' ? dayNames[d.getDay()] : d.getDate().toString();
-        
         dailyMap[d.toDateString()] = { dayLabel, pts: 0, isPayDay, dateObj: d };
       }
 
@@ -7309,22 +8307,18 @@ export default function MemberProfileModal({ member, onClose }) {
         const data = doc.data();
         const date = data.timestamp?.toDate();
         if (!date) return;
-
-        if (date >= actualStartOfWeek && date <= actualToday) {
-          currentWeekPts += (Number(data.points) || 0);
-        }
-
         if (date >= startOfRange && date <= endOfRange) {
+          const pts = Number(data.points) || 0;
+          currentRangePts += pts;
           const dateString = date.toDateString();
           if (dailyMap[dateString]) {
-            dailyMap[dateString].pts += (Number(data.points) || 0);
+            dailyMap[dateString].pts += pts;
           }
         }
       });
 
       const chartArray = Object.values(dailyMap).sort((a, b) => a.dateObj - b.dateObj);
-
-      setWeeklyPoints(currentWeekPts);
+      setTimeframePoints(currentRangePts);
       setHistoryData(chartArray);
     }, (error) => {
       console.error("Error fetching history:", error);
@@ -7336,7 +8330,7 @@ export default function MemberProfileModal({ member, onClose }) {
   if (!member) return null;
 
   const payRate = member.payRate || 0;
-  const weeklyEarned = (weeklyPoints * payRate).toFixed(2);
+  const timeframeEarned = (timeframePoints * payRate).toFixed(2);
   const maxPoints = Math.max(...historyData.map(d => d.pts), 10);
 
   const linePoints = historyData.map((d, i) => {
@@ -7348,7 +8342,6 @@ export default function MemberProfileModal({ member, onClose }) {
   const handleUpdateSetting = async (field, value) => {
     try {
       await updateDoc(doc(db, 'familyMembers', member.id), { [field]: value });
-      if (field === 'avatar') setIsEditing(false);
     } catch (error) {
       console.error(`Error updating ${field}:`, error);
       alert("Failed to save changes.");
@@ -7356,19 +8349,24 @@ export default function MemberProfileModal({ member, onClose }) {
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target?.files?.[0];
+    const inputElement = e.target;
+    
     if (!file) return;
 
     setUploading(true);
     try {
-      const fileRef = ref(storage, `avatars/${member.id}_${Date.now()}`);
-      await uploadBytes(fileRef, file);
-      const downloadUrl = await getDownloadURL(fileRef);
-      await handleUpdateSetting('avatar', downloadUrl);
+      const optimizedBlob = await compressImage(file, 400, 400, 0.8);
+      const safeName = `avatar_${member.id}_${Date.now()}.jpg`; 
+      const downloadUrl = await uploadToCloudflare(optimizedBlob, safeName);
+      
+      setPreviewAvatar(downloadUrl); // Update visually instantly
+      await handleUpdateSetting('avatar', downloadUrl); // Save to DB
     } catch (error) {
       console.error("Error uploading file:", error);
-      alert("Failed to upload image.");
+      alert("Failed to compress and upload image to Cloudflare.");
     } finally {
+      if (inputElement) inputElement.value = '';
       setUploading(false);
     }
   };
@@ -7386,14 +8384,20 @@ export default function MemberProfileModal({ member, onClose }) {
   };
 
   let rangeLabel = '';
+  const now = new Date();
+  let isCurrentTimeframe = false;
+
   if (historyTimeframe === 'weekly') {
     const wStart = new Date(referenceDate);
     wStart.setDate(referenceDate.getDate() - referenceDate.getDay());
     const wEnd = new Date(wStart);
     wEnd.setDate(wStart.getDate() + 6);
     rangeLabel = `${wStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})} - ${wEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}`;
+    
+    isCurrentTimeframe = now >= wStart && now <= new Date(wEnd.setHours(23, 59, 59));
   } else {
     rangeLabel = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    isCurrentTimeframe = now.getMonth() === referenceDate.getMonth() && now.getFullYear() === referenceDate.getFullYear();
   }
 
   const shouldShowLabel = (index, total) => {
@@ -7402,56 +8406,45 @@ export default function MemberProfileModal({ member, onClose }) {
     return index % 5 === 0;
   };
 
+  const displayColor = member.color || '#6366f1';
+
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]" onClick={e => e.stopPropagation()}>
         
         {/* Header Section */}
-        <div className="bg-indigo-600 p-6 text-center relative shrink-0">
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-indigo-200 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors focus:outline-none"
-          >
+        <div className="p-6 text-center relative shrink-0" style={{ backgroundColor: displayColor }}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors focus:outline-none" >
             <X className="w-5 h-5" />
           </button>
           
           <div className="relative inline-block mt-4 mb-3 group">
-            <div 
-              className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover flex items-center justify-center text-3xl font-black text-white"
-              style={{ backgroundColor: member.color || '#cbd5e1' }}
-            >
-              {member.avatar ? (
-                <img src={member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
+            <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover flex items-center justify-center text-3xl font-black text-white" style={{ backgroundColor: displayColor }} >
+              {previewAvatar || member.avatar ? (
+                <img src={previewAvatar || member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
               ) : (
                 member.name.charAt(0).toUpperCase()
               )}
             </div>
-            <button 
-              onClick={() => setIsEditing(!isEditing)}
-              className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:scale-110 transition-transform border border-slate-100"
-            >
+            <button onClick={() => setIsEditing(!isEditing)} className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:scale-110 transition-transform border border-slate-100" >
               <ImageIcon className="w-4 h-4" />
             </button>
           </div>
-          
           <h2 className="text-3xl font-black text-white tracking-tight">{member.name}</h2>
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-white/20 text-white uppercase tracking-wider mt-2 inline-block">
+            {member.participatesInChores === true || String(member.participatesInChores).toLowerCase() === 'true' ? 'Kid Profile' : 'Adult Profile'}
+          </span>
         </div>
 
-        {/* Content Section (Scrollable) */}
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        {/* Content Section */}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6 bg-slate-50/50">
           {isEditing ? (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-              
-              {/* Sound Selection */}
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-2">
                   <Volume2 className="w-4 h-4" /> Signature Sound
                 </label>
-                <select
-                  value={member.signatureSound || ''}
-                  onChange={(e) => handleUpdateSetting('signatureSound', e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
-                >
+                <select value={member.signatureSound || ''} onChange={(e) => handleUpdateSetting('signatureSound', e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500" >
                   <option value="">Default Pop</option>
                   {soundOptions.map((s, idx) => (
                     <option key={idx} value={s.url}>{s.name}</option>
@@ -7460,13 +8453,12 @@ export default function MemberProfileModal({ member, onClose }) {
                 <p className="text-[10px] text-slate-400 mt-1 pl-1">This plays when you complete a chore!</p>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
+              <div className="border-t border-slate-200 pt-4">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-3">
                   <ImageIcon className="w-4 h-4" /> Choose an Avatar
                 </label>
-                
                 {defaultAvatars.length === 0 ? (
-                  <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-center p-4 bg-white rounded-xl border border-slate-200">
                     <UserCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="text-sm font-medium text-slate-500">No default avatars available.</p>
                   </div>
@@ -7474,9 +8466,12 @@ export default function MemberProfileModal({ member, onClose }) {
                   <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto custom-scrollbar p-1">
                     {defaultAvatars.map((url, idx) => (
                       <button 
-                        key={idx}
-                        onClick={() => handleUpdateSetting('avatar', url)}
-                        className="aspect-square rounded-2xl bg-slate-50 border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all overflow-hidden focus:outline-none"
+                        key={idx} 
+                        onClick={() => {
+                          setPreviewAvatar(url); // Instant Update!
+                          handleUpdateSetting('avatar', url);
+                        }} 
+                        className="aspect-square rounded-2xl bg-white border-2 border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all overflow-hidden focus:outline-none" 
                       >
                         <img src={url} alt={`Avatar option ${idx}`} className="w-full h-full object-cover" />
                       </button>
@@ -7490,7 +8485,7 @@ export default function MemberProfileModal({ member, onClose }) {
                   <div className="w-full border-t border-slate-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-slate-400 uppercase font-bold tracking-wider">Or</span>
+                  <span className="bg-slate-50 px-2 text-slate-400 uppercase font-bold tracking-wider">Or</span>
                 </div>
               </div>
 
@@ -7500,167 +8495,149 @@ export default function MemberProfileModal({ member, onClose }) {
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
               </label>
 
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="w-full py-3 bg-slate-100 rounded-xl text-slate-600 font-bold hover:bg-slate-200 transition-colors focus:outline-none"
-              >
+              <button onClick={() => setIsEditing(false)} className="w-full py-3 bg-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-300 transition-colors focus:outline-none" >
                 Done Editing
               </button>
             </div>
           ) : (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              
-              {/* Weekly Stats Grid */}
+            <>
+              {/* Top Controls: Timeframe Toggle & Date Navigation */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 border border-slate-200 shadow-inner">
+                    <button onClick={() => { setHistoryTimeframe('weekly'); setReferenceDate(new Date()); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} >
+                      Week
+                    </button>
+                    <button onClick={() => { setHistoryTimeframe('monthly'); setReferenceDate(new Date()); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} >
+                      Month
+                    </button>
+                  </div>
+                  <button onClick={() => setReferenceDate(new Date())} className={`flex items-center gap-1.5 py-1.5 px-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-xs rounded-lg border border-indigo-100 transition-all duration-300 ${isCurrentTimeframe ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`} >
+                    <RotateCcw className="w-3.5 h-3.5" /> Current {historyTimeframe === 'weekly' ? 'Week' : 'Month'}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm">
+                  <button onClick={() => shiftTimeframe(-1)} className="p-2.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-500 hover:text-slate-800" >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <h3 className="font-bold text-slate-700 text-sm sm:text-base text-center px-2">
+                    {rangeLabel}
+                  </h3>
+                  <button onClick={() => shiftTimeframe(1)} className="p-2.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-500 hover:text-slate-800" >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic Earnings Boxes */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex flex-col items-center justify-center text-center">
-                  <Star className="w-6 h-6 text-amber-500 mb-2" />
-                  <span className="text-3xl font-black text-amber-600 leading-none">{weeklyPoints}</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-amber-600/70 uppercase tracking-wider mt-1">Points This Week</span>
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4 shadow-sm relative overflow-hidden group">
+                  <Star className="absolute -right-4 -bottom-4 w-20 h-20 text-amber-500 opacity-10 group-hover:scale-110 transition-transform duration-500" />
+                  <div className="text-xs font-black text-amber-600/80 uppercase tracking-widest mb-1 relative z-10">Stars</div>
+                  <div className="text-3xl font-black text-amber-600 relative z-10">
+                    {timeframePoints}
+                  </div>
                 </div>
                 
-                <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex flex-col items-center justify-center text-center">
-                  <Wallet className="w-6 h-6 text-emerald-500 mb-2" />
-                  <span className="text-3xl font-black text-emerald-600 leading-none">${weeklyEarned}</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-emerald-600/70 uppercase tracking-wider mt-1">Earned This Week</span>
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-4 shadow-sm relative overflow-hidden group">
+                  <Wallet className="absolute -right-4 -bottom-4 w-20 h-20 text-emerald-500 opacity-10 group-hover:scale-110 transition-transform duration-500" />
+                  <div className="text-xs font-black text-emerald-600/80 uppercase tracking-widest mb-1 relative z-10">Earnings</div>
+                  <div className="text-3xl font-black text-emerald-600 relative z-10">
+                    ${timeframeEarned}
+                  </div>
                 </div>
               </div>
 
               {/* Advanced History Chart */}
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                 
-                {/* Chart Header & Controls */}
-                <div className="flex flex-col gap-3 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-slate-800 font-bold">
-                      <History className="w-4 h-4 text-indigo-500" /> History
-                    </div>
-                    {/* Timeframe Toggle */}
-                    <div className="flex bg-slate-200 p-1 rounded-lg shrink-0">
-                      <button 
-                        onClick={() => { setHistoryTimeframe('weekly'); setReferenceDate(new Date()); }}
-                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'weekly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Week
-                      </button>
-                      <button 
-                        onClick={() => { setHistoryTimeframe('monthly'); setReferenceDate(new Date()); }}
-                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${historyTimeframe === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Month
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-slate-800 font-bold text-sm uppercase tracking-wider">
+                    <History className="w-4 h-4 text-slate-400" /> Hustle History
                   </div>
-
-                  <div className="flex items-center justify-between bg-white px-2 py-1 rounded-lg border border-slate-100">
-                    <button onClick={() => shiftTimeframe(-1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ChevronLeft className="w-4 h-4"/></button>
-                    <h3 className="font-bold text-slate-700 text-xs sm:text-sm text-center truncate px-2">
-                      {rangeLabel}
-                    </h3>
-                    <button onClick={() => shiftTimeframe(1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ChevronRight className="w-4 h-4"/></button>
-                    
-                    <div className="flex bg-slate-100 p-0.5 rounded-lg shrink-0 ml-2">
-                      <button 
-                        onClick={() => setChartType('bar')}
-                        className={`p-1 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => setChartType('line')}
-                        className={`p-1 rounded-md transition-colors ${chartType === 'line' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        <LineChart className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg shrink-0 border border-slate-200">
+                    <button onClick={() => setChartType('bar')} className={`p-1.5 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} >
+                      <BarChart3 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setChartType('line')} className={`p-1.5 rounded-md transition-colors ${chartType === 'line' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} >
+                      <LineChart className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                
-                {/* The Chart Canvas */}
+
                 <div className="relative h-32 w-full mt-2">
-                  
                   {chartType === 'bar' ? (
-                    /* BAR CHART */
                     <div className={`absolute inset-0 flex items-end justify-between px-1 ${historyTimeframe === 'weekly' ? 'gap-1' : 'gap-[1px]'}`}>
                       {historyData.map((dayData, i) => {
-                        const heightPct = Math.max((dayData.pts / maxPoints) * 100, dayData.pts > 0 ? 8 : 0);
+                        const heightPct = Math.max((dayData.pts / maxPoints) * 100, dayData.pts > 0 ? 4 : 0);
                         return (
                           <div key={i} className="flex flex-col items-center justify-end h-full flex-1 relative group">
-                            {/* Hover Tooltip */}
-                            <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded pointer-events-none transition-opacity z-20 whitespace-nowrap">
-                              {dayData.dayLabel}: {dayData.pts} pts
+                            <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-1 px-2 rounded font-bold pointer-events-none transition-opacity z-20 shadow-md">
+                              {dayData.pts}
                             </div>
-                            
-                            {/* Pay Day Indicator */}
-                            {dayData.isPayDay && (
-                              <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-[1px] z-10" title="Pay Day!">
-                                <DollarSign className="w-2.5 h-2.5" />
-                              </div>
-                            )}
-                            
-                            <div
-                              className={`w-full rounded-t-sm transition-all duration-500 ${historyTimeframe === 'weekly' ? 'max-w-[24px]' : ''} ${dayData.isPayDay ? 'bg-emerald-400' : 'bg-amber-400'}`}
-                              style={{ height: `${heightPct}%` }}
-                            ></div>
+                            <div 
+                              className={`w-full rounded-t-sm transition-all duration-500 ease-out group-hover:opacity-80 relative ${dayData.isPayDay ? 'ring-1 ring-emerald-400 ring-offset-[1px]' : ''}`} 
+                              style={{ 
+                                height: `${heightPct}%`, 
+                                backgroundColor: dayData.pts > 0 ? displayColor : '#e2e8f0',
+                                opacity: dayData.pts > 0 ? 0.9 : 1
+                              }}
+                            >
+                                {dayData.isPayDay && dayData.pts > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400"></div>}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    /* LINE CHART (Daily Points) */
-                    <div className="absolute inset-0 px-2 sm:px-4">
-                      {/* Grid Lines */}
-                      <div className="absolute inset-0 flex flex-col justify-between border-l border-b border-slate-200 ml-2">
+                    <div className="absolute inset-0 px-2">
+                      <div className="absolute inset-0 flex flex-col justify-between border-l border-b border-slate-200 pb-0.5">
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                         <div className="w-full border-t border-dashed border-slate-200"></div>
                       </div>
-                      
-                      {/* The Line */}
-                      <svg className="absolute inset-0 w-full h-full overflow-visible z-10 ml-2" preserveAspectRatio="none" viewBox="0 0 100 100">
+                      <svg className="absolute inset-0 w-full h-full overflow-visible z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <defs>
+                          <linearGradient id={`grad-${member.id}`} x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor={displayColor} stopOpacity="0.2"/>
+                            <stop offset="100%" stopColor={displayColor} stopOpacity="0"/>
+                          </linearGradient>
+                        </defs>
+                        <polygon points={`0,100 ${linePoints} 100,100`} fill={`url(#grad-${member.id})`} />
                         <polyline 
-                          points={linePoints}
-                          fill="none"
-                          stroke="#6366f1"
-                          strokeWidth="3"
-                          strokeLinecap="round"
+                          points={linePoints} 
+                          fill="none" 
+                          stroke={displayColor} 
+                          strokeWidth="2" 
+                          strokeLinecap="round" 
                           strokeLinejoin="round"
-                          className="drop-shadow-sm"
+                          className="drop-shadow-sm" 
                         />
                       </svg>
-
-                      {/* Line Chart Tooltips & Payday markers */}
-                      <div className="absolute inset-0 flex justify-between ml-2">
-                         {historyData.map((dayData, i) => (
-                           <div key={i} className="h-full flex-1 relative group z-20">
-                             <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded pointer-events-none transition-opacity -translate-x-1/2 whitespace-nowrap">
-                               {dayData.dayLabel}: {dayData.pts} pts
-                             </div>
-                             {dayData.isPayDay && (
-                               <div className="absolute -bottom-5 text-emerald-500 bg-emerald-100 rounded-full p-[1px] -translate-x-1/2" title="Pay Day!">
-                                 <DollarSign className="w-2.5 h-2.5" />
-                               </div>
-                             )}
-                           </div>
-                         ))}
+                      <div className="absolute inset-0 flex justify-between pb-0.5">
+                        {historyData.map((dayData, i) => (
+                          <div key={i} className="h-full flex-1 relative group z-20 flex items-end justify-center">
+                            <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-[10px] py-1 px-2 rounded font-bold pointer-events-none transition-opacity -translate-x-1/2 whitespace-nowrap shadow-md">
+                              {dayData.dayLabel}: {dayData.pts} pts
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
-
-                <div className="mt-8 flex justify-between px-1">
+                
+                <div className="mt-2 flex justify-between px-1 border-t border-slate-100 pt-2">
                   {historyData.map((dayData, i) => (
-                    <div 
-                      key={i} 
-                      className={`font-bold uppercase flex-1 text-center truncate ${historyTimeframe === 'monthly' ? 'text-[8px] sm:text-[10px]' : 'text-[10px]'} ${dayData.isPayDay ? 'text-emerald-600' : 'text-slate-400'}`}
-                    >
-                      {shouldShowLabel(i, historyData.length) ? dayData.dayLabel : ''}
+                    <div key={i} className={`font-bold uppercase flex-1 text-center truncate text-[10px] ${dayData.isPayDay ? 'text-emerald-600' : 'text-slate-400'}`} style={{ color: (historyTimeframe === 'monthly' && !shouldShowLabel(i, historyData.length)) ? 'transparent' : undefined }}>
+                      {shouldShowLabel(i, historyData.length) ? dayData.dayLabel : '.'}
                     </div>
                   ))}
                 </div>
 
               </div>
-
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -7890,12 +8867,12 @@ export const storage = getStorage(app);
 
 ```js
 export const DEFAULT_MEMBERS = [
-  { id: 'dad', name: 'Dad', color: '#3B82F6', isKid: false },
-  { id: 'mom', name: 'Mom', color: '#EC4899', isKid: false },
-  { id: 'madison', name: 'Madison', color: '#8B5CF6', isKid: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
-  { id: 'mason', name: 'Mason', color: '#10B981', isKid: true, age: 11, signatureSound: 'level-up' },
-  { id: 'hudson', name: 'Hudson', color: '#F59E0B', isKid: true, age: 7, signatureSound: 'arcade-coin' },
-  { id: 'hunter', name: 'Hunter', color: '#EF4444', isKid: true, age: 5, signatureSound: 'victory-fanfare' }
+  { id: 'dad', name: 'Dad', color: '#3B82F6', participatesInChores: false },
+  { id: 'mom', name: 'Mom', color: '#EC4899', participatesInChores: false },
+  { id: 'madison', name: 'Madison', color: '#8B5CF6', participatesInChores: true, age: 13, signatureSound: 'fairy-chimes', schedule: { type: 'alternating-weeks', referenceDate: '2025-02-11', offset: 0, description: 'Every other week (Tue-Tue)' } },
+  { id: 'mason', name: 'Mason', color: '#10B981', participatesInChores: true, age: 11, signatureSound: 'level-up' },
+  { id: 'hudson', name: 'Hudson', color: '#F59E0B', participatesInChores: true, age: 7, signatureSound: 'arcade-coin' },
+  { id: 'hunter', name: 'Hunter', color: '#EF4444', participatesInChores: true, age: 5, signatureSound: 'victory-fanfare' }
 ];
 
 export const DEFAULT_CHORES = [
@@ -8090,18 +9067,100 @@ export function useChores() {
 }
 ```
 
+### `// src/hooks/useCustody.js`
+
+```js
+import { useState, useEffect } from 'react';
+import { doc, onSnapshot, setDoc, deleteField } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { useMidnightTick } from './useMidnightTick';
+
+export function useCustody() {
+  const todayStr = useMidnightTick();
+  const [overrides, setOverrides] = useState({});
+
+  const getLocalIsoDate = (dateString) => {
+    const d = new Date(dateString);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayIso = getLocalIsoDate(todayStr);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'dailyOverrides', todayIso), (docSnap) => {
+      if (docSnap.exists()) {
+        setOverrides(docSnap.data());
+      } else {
+        setOverrides({});
+      }
+    });
+    return () => unsub();
+  }, [todayIso]);
+
+  const checkBaseSchedule = (kid, targetDateStr) => {
+    // If no schedule exists, default to always here
+    if (!kid || !kid.schedule || !kid.schedule.pattern || kid.schedule.pattern.length === 0) return true;
+    if (!kid.schedule.referenceDate) return true;
+
+    const pattern = kid.schedule.pattern;
+    const cycleLength = pattern.length;
+
+    // Standardize target to local midnight
+    const target = new Date(targetDateStr);
+    target.setHours(0, 0, 0, 0);
+
+    // Standardize the anchor string (YYYY-MM-DD) to local midnight
+    const [refY, refM, refD] = kid.schedule.referenceDate.split('-');
+    const refDate = new Date(refY, refM - 1, refD);
+    refDate.setHours(0, 0, 0, 0);
+
+    const msPerDay = 1000 * 60 * 60 * 24;
+    // Difference in days. Math.round handles daylight savings time shifts safely.
+    const daysDiff = Math.round((target - refDate) / msPerDay);
+
+    // Calculate the exact index in the pattern array. 
+    // The ((n % m) + m) % m formula ensures negative days (past dates) wrap correctly.
+    const cycleDay = ((daysDiff % cycleLength) + cycleLength) % cycleLength; 
+    
+    return pattern[cycleDay];
+  };
+
+  const isHereToday = (kid) => {
+    if (!kid) return false;
+    if (overrides[kid.id] !== undefined) return overrides[kid.id];
+    return checkBaseSchedule(kid, todayStr);
+  };
+
+  const toggleOverride = async (kidId, currentlyHere) => {
+    const overrideRef = doc(db, 'dailyOverrides', todayIso);
+    await setDoc(overrideRef, { [kidId]: !currentlyHere }, { merge: true });
+  };
+
+  const clearOverride = async (kidId) => {
+    const overrideRef = doc(db, 'dailyOverrides', todayIso);
+    await setDoc(overrideRef, { [kidId]: deleteField() }, { merge: true });
+  };
+
+  return { isHereToday, checkBaseSchedule, overrides, toggleOverride, clearOverride };
+}
+```
+
 ### `// src/hooks/useDailyCompletions.js`
 
 ```js
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useMidnightTick } from './useMidnightTick';
 
 export function useDailyCompletions() {
   const [completions, setCompletions] = useState({});
   const [loading, setLoading] = useState(true);
-
-  const todayStr = new Date().toDateString();
+  
+  const todayStr = useMidnightTick();
 
   useEffect(() => {
     const q = query(collection(db, 'completions'), where('date', '==', todayStr));
@@ -8117,13 +9176,12 @@ export function useDailyCompletions() {
   }, [todayStr]);
 
   const toggleCompletion = async (chore, memberId, isCurrentlyDone) => {
-    const compId = `${chore.id}-${todayStr}`;
+    const currentTodayStr = new Date().toDateString();
+    const compId = `${chore.id}-${currentTodayStr}`;
     const compRef = doc(db, 'completions', compId);
     const memberRef = doc(db, 'familyMembers', memberId);
     
     const batch = writeBatch(db);
-
-    // FORCE the points to be a strict mathematical number before Firestore sees it
     const numericPoints = Number(chore.points) || 0;
 
     if (isCurrentlyDone) {
@@ -8132,7 +9190,7 @@ export function useDailyCompletions() {
     } else {
       batch.set(compRef, {
         choreId: chore.id,
-        date: todayStr,
+        date: currentTodayStr,
         completedBy: memberId,
         points: numericPoints,
         timestamp: new Date()
@@ -8155,86 +9213,90 @@ export function useDailyCompletions() {
 ### `// src/hooks/useDailyContent.js`
 
 ```js
+// src/hooks/useDailyContent.js
 import { useState, useEffect } from 'react';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useMidnightTick } from './useMidnightTick';
 
 export function useDailyContent() {
   const [content, setContent] = useState({ text: '', type: 'loading' });
   const [loading, setLoading] = useState(true);
+  const todayStr = useMidnightTick();
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const today = new Date();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const dateId = `${month}-${day}`; // e.g., "04-25"
-
-        // 1. Check for a Birthday or Holiday override
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const dateId = `${month}-${day}`;
+        
+        // 1. HARD OVERRIDE: Check for Special Days / Birthdays FIRST
         const overrideRef = doc(db, 'dailyContent', dateId);
         const overrideSnap = await getDoc(overrideRef);
-
         if (overrideSnap.exists()) {
           setContent({ text: overrideSnap.data().text, type: 'override' });
           setLoading(false);
-          return;
+          return; // Skip the rest of the logic entirely!
         }
 
-        // 2. No Override today. Are we doing a Joke or a Fact?
-        const start = new Date(today.getFullYear(), 0, 0);
-        const diff = today - start;
-        const oneDay = 1000 * 60 * 60 * 24;
-        const dayOfYear = Math.floor(diff / oneDay);
+        // 2. BULLETPROOF DATE MATH: Calculate exact integer days since epoch
+        // Using Date.UTC at local midnight prevents Daylight Savings Time shifts 
+        // from causing fractions that flip the day over mid-afternoon.
+        const localMidnightUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        const daysSinceEpoch = Math.floor(localMidnightUTC / 86400000);
+        
+        // 3. Alternate Days: Even days = Facts, Odd days = Jokes
+        const isJokeDay = daysSinceEpoch % 2 === 1;
 
-        if (dayOfYear % 2 === 0) {
-          // EVEN DAY: Family-Friendly Dad Joke API (Cached for the day)
+        if (isJokeDay) {
+          // Check if we already fetched a joke for TODAY (prevents refresh re-rolls)
           const cachedDate = localStorage.getItem('daily_joke_date');
-          
           if (cachedDate === dateId) {
             setContent({ text: localStorage.getItem('daily_joke_text'), type: 'joke' });
           } else {
-            const jokeRes = await fetch('https://icanhazdadjoke.com/', {
-              headers: { Accept: 'application/json' }
+            // FIX: Added cache: 'no-store' so the browser doesn't feed us a repeating cached joke!
+            const jokeRes = await fetch('https://icanhazdadjoke.com/', { 
+              headers: { Accept: 'application/json' },
+              cache: 'no-store'
             });
             const jokeData = await jokeRes.json();
             
-            // Save to browser storage so it doesn't change on refresh
             localStorage.setItem('daily_joke_date', dateId);
             localStorage.setItem('daily_joke_text', jokeData.joke);
-            
             setContent({ text: jokeData.joke, type: 'joke' });
           }
-          
         } else {
-          // ODD DAY: Custom Fact from Firestore
+          // FETCH FACTS
           const factsRef = collection(db, 'dailyContent');
           const q = query(factsRef, where('type', '==', 'fact'));
           const querySnapshot = await getDocs(q);
           
           if (!querySnapshot.empty) {
-            // Sort by ID to ensure absolute deterministic order
+            // Sort by ID to ensure all devices have the exact same array order
             const facts = querySnapshot.docs
               .sort((a, b) => a.id.localeCompare(b.id))
               .map(d => d.data().text);
-              
-            // Pick a consistent fact based on the day of the year
-            const deterministicFact = facts[dayOfYear % facts.length];
+            
+            // FIX: Deterministic picking. Steps through the array 1 by 1 based on the date.
+            // Never repeats until the entire list has been shown!
+            const deterministicFact = facts[daysSinceEpoch % facts.length];
             setContent({ text: deterministicFact, type: 'fact' });
           } else {
-            setContent({ text: "Did you know? Our database is currently empty!", type: 'fact' });
+            setContent({ text: "Did you know? Our database is currently empty! Add some facts in the admin panel.", type: 'fact' });
           }
         }
       } catch (error) {
         console.error("Error fetching daily content:", error);
-        setContent({ text: "Why did the computer cross the road? To get to the other site!", type: 'joke' }); // Fallback
+        setContent({ text: "Why did the computer cross the road? To get to the other site!", type: 'joke' });
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, []);
+  }, [todayStr]);
 
   return { content, loading };
 }
@@ -8334,6 +9396,112 @@ export function useFamilyMembers() {
 }
 ```
 
+### `// src/hooks/useKiosk.js`
+
+```js
+import { useState, useEffect, useRef } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+export function useKiosk() {
+  const [config, setConfig] = useState({
+    manualDim: false,
+    manualMute: false,
+    dimIntensity: 0.85,
+    quietTimeEnabled: false,
+    quietTimeStart: '20:00',
+    quietTimeEnd: '07:00'
+  });
+  
+  const [isQuietTime, setIsQuietTime] = useState(false);
+  const [isTemporarilyAwake, setIsTemporarilyAwake] = useState(false);
+  
+  // NEW: Check if this specific device is a designated Kiosk Receiver
+  const [isKioskDevice, setIsKioskDevice] = useState(() => localStorage.getItem('isKioskDevice') === 'true');
+
+  const wakeTimerRef = useRef(null);
+
+  // Sync globally with Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'kiosk'), (docSnap) => {
+      if (docSnap.exists()) {
+        setConfig(prev => ({ ...prev, ...docSnap.data() }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Minute-by-Minute schedule checker
+  useEffect(() => {
+    if (!config.quietTimeEnabled) {
+      setIsQuietTime(false);
+      return;
+    }
+
+    const checkTime = () => {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      const [startH, startM] = config.quietTimeStart.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+
+      const [endH, endM] = config.quietTimeEnd.split(':').map(Number);
+      const endMinutes = endH * 60 + endM;
+
+      let active = false;
+      if (startMinutes < endMinutes) {
+        active = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+      } else {
+        active = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+      }
+      setIsQuietTime(active);
+    };
+
+    checkTime(); 
+    const interval = setInterval(checkTime, 60000); 
+    return () => clearInterval(interval);
+  }, [config.quietTimeEnabled, config.quietTimeStart, config.quietTimeEnd]);
+
+  // Wake-on-Tap Inactivity Timer (Only runs if this is a Kiosk!)
+  useEffect(() => {
+    if (!isKioskDevice) return; 
+
+    const handleActivity = () => {
+      setIsTemporarilyAwake(true);
+      if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      wakeTimerRef.current = setTimeout(() => {
+        setIsTemporarilyAwake(false);
+      }, 60000); 
+    };
+
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('mousemove', handleActivity);
+
+    return () => {
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('mousemove', handleActivity);
+      if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+    };
+  }, [isKioskDevice]);
+
+  // Toggle this specific device's role
+  const toggleKioskMode = (enabled) => {
+    localStorage.setItem('isKioskDevice', enabled);
+    setIsKioskDevice(enabled);
+  };
+
+  const isBaseDimmed = config.manualDim || isQuietTime;
+  
+  // The device ONLY dims or mutes if it has Kiosk Mode enabled locally
+  const isDimmed = isKioskDevice ? (isBaseDimmed && !isTemporarilyAwake) : false;
+  const isMuted = isKioskDevice ? (config.manualMute || isQuietTime) : false;
+
+  return { isDimmed, isMuted, dimIntensity: config.dimIntensity, isKioskDevice, toggleKioskMode };
+}
+```
+
 ### `// src/hooks/useMessageCentre.js`
 
 ```js
@@ -8365,6 +9533,45 @@ export function useMessageCentre() {
   };
 
   return { messageData, loading, saveMessage };
+}
+```
+
+### `// src/hooks/useMidnightTick.js`
+
+```js
+import { useState, useEffect } from 'react';
+
+export function useMidnightTick() {
+  const [todayStr, setTodayStr] = useState(() => new Date().toDateString());
+
+  useEffect(() => {
+    const checkDate = () => {
+      const current = new Date().toDateString();
+      setTodayStr((prev) => {
+        if (prev !== current) return current;
+        return prev;
+      });
+    };
+
+    // 1. The Standard Heartbeat (every 60 seconds)
+    const interval = setInterval(checkDate, 60000);
+
+    // 2. The "Wake Up" Trigger (fires instantly when device screen turns on)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkDate();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkDate);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkDate);
+    };
+  }, []);
+
+  return todayStr;
 }
 ```
 
@@ -8462,7 +9669,8 @@ createRoot(document.getElementById('root')).render(
 ### `// src/pages/Home.jsx`
 
 ```javascript
-import { useState } from 'react';
+// src/pages/Home.jsx
+import { useState, useEffect } from 'react';
 import MessageCentre from '../components/dashboard/MessageCentre';
 import DailyContent from '../components/dashboard/DailyContent';
 import Leaderboard from '../components/dashboard/Leaderboard';
@@ -8474,6 +9682,18 @@ import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../hooks/useTheme';
 export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false);
   const { theme } = useTheme();
+
+  // LOCAL OVERRIDE LISTENER
+  const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
+
+  useEffect(() => {
+    // This allows Home to react instantly when the ThemeTab slider moves
+    const handleOverrideChange = () => {
+      setLocalOverride(localStorage.getItem('bgPositionOverride'));
+    };
+    window.addEventListener('localBgOverrideChanged', handleOverrideChange);
+    return () => window.removeEventListener('localBgOverrideChanged', handleOverrideChange);
+  }, []);
 
   // Resolve active theme settings globally
   const activePreset = THEME_PRESETS.find(p => p.id === theme?.preset) || THEME_PRESETS[0];
@@ -8495,6 +9715,11 @@ export default function Home() {
   const panelRgba = `rgba(255, 255, 255, ${(theme?.panelOpacity ?? 90) / 100})`;
   const panelBlur = `${theme?.panelBlur ?? 8}px`;
 
+  // Apply effective positions (Local Override trumps global Firebase theme)
+  const localOverrideActive = localOverride !== null && localOverride !== '';
+  const effectiveDesktopPos = localOverrideActive ? localOverride : (theme?.bgPositionDesktop ?? 50);
+  const effectiveMobilePos = localOverrideActive ? localOverride : (theme?.bgPositionMobile ?? 50);
+
   return (
     <>
       {activeFont.google && <link href={`https://fonts.googleapis.com/css2?family=${activeFont.google}&display=swap`} rel="stylesheet" />}
@@ -8505,8 +9730,8 @@ export default function Home() {
           background-attachment: fixed;
           font-family: ${activeFont.css};
         }
-        @media (min-width: 768px) { body { background-position: center ${theme?.bgPositionDesktop ?? 50}%; } }
-        @media (max-width: 767px) { body { background-position: ${theme?.bgPositionMobile ?? 50}% center; } }
+        @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
+        @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
         
         /* Set CSS Glass Variables globally */
         :root {
@@ -8542,6 +9767,46 @@ export default function Home() {
     </>
   );
 }
+```
+
+### `// src/utils/cloudflareUploader.js`
+
+```js
+// src/utils/cloudflareUploader.js
+
+const IMAGE_WORKER_URL = "https://schell-calendar-images.matthew-schell.workers.dev";
+const IMAGE_UPLOAD_SECRET = "schell-calendar-2026";
+
+/**
+ * Uploads a Blob/File to the custom Cloudflare Worker R2 bucket.
+ * @param {Blob|File} blob - The file to upload (compressed or raw).
+ * @param {string} filename - The target filename in the bucket.
+ * @returns {Promise<string>} The public URL of the uploaded file.
+ */
+export const uploadToCloudflare = async (blob, filename) => {
+  const formData = new FormData();
+  formData.append('file', blob, filename);
+
+  const response = await fetch(`${IMAGE_WORKER_URL}/upload`, {
+    method: 'POST',
+    headers: { 
+      'X-Upload-Secret': IMAGE_UPLOAD_SECRET 
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare upload failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (data.url) {
+    return data.url;
+  } else {
+    throw new Error('Cloudflare worker did not return a valid URL.');
+  }
+};
 ```
 
 ### `// src/utils/dateHelpers.js`
@@ -8647,6 +9912,83 @@ export const HOLIDAYS_DATA = [
 
 ```
 
+### `// src/utils/imageCompression.js`
+
+```js
+// src/utils/imageCompression.js
+
+/**
+ * Compresses an image file using the browser's native Canvas API.
+ * @param {File} file - The original image file from the input.
+ * @param {number} maxWidth - Max width of the output image.
+ * @param {number} maxHeight - Max height of the output image.
+ * @param {number} quality - JPEG compression quality (0.0 to 1.0).
+ * @returns {Promise<Blob>} A promise that resolves with the compressed Blob.
+ */
+export const compressImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return reject(new Error('Invalid file type provided for compression.'));
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Calculate aspect ratio preserving dimensions
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          // Draw image to canvas, resizing it
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Return the raw Blob directly (prevents 'new File()' crashes on iOS/WebViews)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Canvas compression failed to generate a blob.'));
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        } catch (err) {
+          reject(err);
+        }
+      };
+      
+      img.onerror = () => reject(new Error('Image failed to load onto canvas.'));
+    };
+    
+    reader.onerror = () => reject(new Error('FileReader failed to read the file.'));
+  });
+};
+```
+
 ### `// src/utils/seedDatabase.js`
 
 ```js
@@ -8688,7 +10030,7 @@ export const injectHistoricalData = async () => {
     const membersSnap = await getDocs(collection(db, 'familyMembers'));
     const kids = membersSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
+      .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
       .map(k => k.id);
 
     if (kids.length === 0) {

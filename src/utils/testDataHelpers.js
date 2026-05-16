@@ -7,7 +7,7 @@ export const injectHistoricalData = async () => {
     const membersSnap = await getDocs(collection(db, 'familyMembers'));
     const kids = membersSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(m => m.isKid === true || String(m.isKid).toLowerCase() === 'true')
+      .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
       .map(k => k.id);
 
     if (kids.length === 0) {
