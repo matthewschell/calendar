@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useKiosk } from './useKiosk';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_SETTINGS = {
@@ -16,6 +17,7 @@ export function useCelebration() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const audioRef = useRef(null);
+  const { isMuted } = useKiosk();
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'systemSettings', 'celebrations'), (docSnap) => {
@@ -38,7 +40,8 @@ export function useCelebration() {
     const durationMs = config.duration * 1000;
     const end = Date.now() + durationMs;
 
-    if (config.soundUrl) {
+    // Respect kiosk muting
+    if (config.soundUrl && !isMuted) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -61,7 +64,6 @@ export function useCelebration() {
         };
         frame();
       } 
-      
       else if (layer.type === 'fireworks') {
         const randomInRange = (min, max) => Math.random() * (max - min) + min;
         const interval = setInterval(() => {
@@ -79,36 +81,32 @@ export function useCelebration() {
           });
         }, 400);
       }
-
       else if (layer.type === 'rain') {
         const frame = () => {
-          // Angle 270 shoots it straight down instead of up!
           confetti({ particleCount: pCount, angle: 270, startVelocity: 25, origin: { y: -0.1, x: Math.random() }, colors: layer.colors, scalar: layer.scale, zIndex: 100002, spread: 45, gravity: 1 });
           if (Date.now() < end) requestAnimationFrame(frame);
         };
         frame();
       }
-
       else if (layer.type === 'snow') {
         const randomInRange = (min, max) => Math.random() * (max - min) + min;
         const frame = () => {
           confetti({ 
             particleCount: pCount, 
-            startVelocity: 0, // Set to 0 so it doesn't fly upwards off the screen!
+            startVelocity: 0, 
             origin: { y: -0.1, x: Math.random() }, 
             colors: layer.colors, 
-            scalar: layer.scale * randomInRange(0.6, 1.2), // Random sizes for realistic snowflakes
+            scalar: layer.scale * randomInRange(0.6, 1.2), 
             shapes: ['circle'], 
             zIndex: 100002, 
-            gravity: randomInRange(0.2, 0.5), // Random weight so they fall at different speeds
-            drift: randomInRange(-0.6, 0.6), // Blow left and right in the wind
+            gravity: randomInRange(0.2, 0.5), 
+            drift: randomInRange(-0.6, 0.6), 
             ticks: 300 
           });
           if (Date.now() < end) requestAnimationFrame(frame);
         };
         frame();
       }
-
       else if (layer.type === 'realistic-burst') {
         const fireBurst = () => {
             const baseCount = Math.round(150 * layer.intensity);
@@ -127,7 +125,6 @@ export function useCelebration() {
           fireBurst();
         }, 1500);
       }
-
       else if (layer.type === 'center-burst') {
         const interval = setInterval(() => {
           if (Date.now() > end) return clearInterval(interval);

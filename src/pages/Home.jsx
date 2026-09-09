@@ -1,4 +1,3 @@
-// src/pages/Home.jsx
 import { useState, useEffect } from 'react';
 import MessageCentre from '../components/dashboard/MessageCentre';
 import DailyContent from '../components/dashboard/DailyContent';
@@ -12,11 +11,9 @@ export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false);
   const { theme } = useTheme();
 
-  // LOCAL OVERRIDE LISTENER
   const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
 
   useEffect(() => {
-    // This allows Home to react instantly when the ThemeTab slider moves
     const handleOverrideChange = () => {
       setLocalOverride(localStorage.getItem('bgPositionOverride'));
     };
@@ -24,7 +21,6 @@ export default function Home() {
     return () => window.removeEventListener('localBgOverrideChanged', handleOverrideChange);
   }, []);
 
-  // Resolve active theme settings globally
   const activePreset = THEME_PRESETS.find(p => p.id === theme?.preset) || THEME_PRESETS[0];
   const isCustom = theme?.preset === 'custom';
   
@@ -44,7 +40,6 @@ export default function Home() {
   const panelRgba = `rgba(255, 255, 255, ${(theme?.panelOpacity ?? 90) / 100})`;
   const panelBlur = `${theme?.panelBlur ?? 8}px`;
 
-  // Apply effective positions (Local Override trumps global Firebase theme)
   const localOverrideActive = localOverride !== null && localOverride !== '';
   const effectiveDesktopPos = localOverrideActive ? localOverride : (theme?.bgPositionDesktop ?? 50);
   const effectiveMobilePos = localOverrideActive ? localOverride : (theme?.bgPositionMobile ?? 50);
@@ -62,7 +57,6 @@ export default function Home() {
         @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
         @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
         
-        /* Set CSS Glass Variables globally */
         :root {
           --glass-panel-bg: ${panelRgba};
           --glass-panel-blur: blur(${panelBlur});
@@ -72,9 +66,11 @@ export default function Home() {
       
       <div className="min-h-screen w-full p-4 md:p-6 flex flex-col h-screen overflow-hidden relative">
         <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5">
-          <div className="flex-2 flex flex-col min-h-100">
+          {/* Calendar takes 2 flex units (2/3 of desktop width) */}
+          <div className="flex-[2] flex flex-col min-h-0">
             <CalendarGrid />
           </div>
+          {/* Sidebar takes 1 flex unit (1/3 of desktop width) */}
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4 hide-scrollbar">
             <MessageCentre />
             <DailyContent />
@@ -83,9 +79,10 @@ export default function Home() {
           </div>
         </div>
 
+        {/* High-contrast, touch-friendly Admin button */}
         <button 
           onClick={() => setShowAdmin(true)} 
-          className="fixed bottom-3 left-3 p-2 text-white/30 hover:text-white/80 transition-all z-40 text-xl hover:rotate-90 drop-shadow-md"
+          className="fixed bottom-3 left-3 p-2.5 bg-slate-900/40 hover:bg-slate-900/70 backdrop-blur-md rounded-xl text-white transition-all z-40 text-lg hover:rotate-90 shadow-md cursor-pointer border border-white/20"
           title="Admin Settings"
         >
           ⚙️

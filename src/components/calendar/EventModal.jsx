@@ -64,13 +64,16 @@ export default function EventModal({ isOpen, onClose, selectedDate, existingEven
     });
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     if (!formData.title || !formData.date || formData.member.length === 0) return;
     setIsSaving(true);
 
     try {
       const startDate = new Date(formData.date + 'T00:00:00');
-      const endDate = formData.endDate ? new Date(formData.endDate + 'T00:00:00') : startDate;
+      let endDate = formData.endDate ? new Date(formData.endDate + 'T00:00:00') : startDate;
+      // Guard against end date being earlier than start date
+      if (endDate < startDate) endDate = startDate;
+      
       const isMultiDay = startDate.getTime() !== endDate.getTime();
       
       const batch = writeBatch(db);

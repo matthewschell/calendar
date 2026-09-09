@@ -6,6 +6,7 @@ import { useFamilyMembers } from '../../hooks/useFamilyMembers';
 import { useDailyCompletions } from '../../hooks/useDailyCompletions';
 import { useCelebration } from '../../hooks/useCelebration';
 import { useCustody } from '../../hooks/useCustody';
+import { useKiosk } from '../../hooks/useKiosk';
 
 export default function ChoresPanel() {
   const { chores, loading: choresLoading } = useChores();
@@ -14,6 +15,7 @@ export default function ChoresPanel() {
   
   const { triggerCelebration } = useCelebration();
   const { isHereToday } = useCustody();
+  const { isMuted } = useKiosk();
   
   const [claimingChore, setClaimingChore] = useState(null);
   const [celebratingKid, setCelebratingKid] = useState(null);
@@ -26,28 +28,84 @@ export default function ChoresPanel() {
     );
   }
 
-  // MATH FILTER: Completely strip out any kids who are scheduled as "Away" today
+  // Helper: Verify if a chore should be active today
+  const isChoreScheduledForToday = (chore, today = new Date()) => {
+    if (chore.isArchived) return false;
+
+    const targetDay = today.getDay();
+    const freq = chore.frequency || 'daily';
+
+    if (freq === 'today-only') {
+      return chore.createdDate === today.toDateString();
+    }
+
+    if (freq === 'daily') return true;
+
+    if (freq === 'weekly') {
+      if (chore.days && chore.days.length > 0) {
+        return chore.days.includes(targetDay);
+      }
+      if (chore.weekDay !== null && chore.weekDay !== undefined) {
+        return chore.weekDay === targetDay;
+      }
+      return false;
+    }
+
+    if (freq === 'bi-weekly' && chore.days && chore.days.length > 0 && chore.startDate) {
+      if (!chore.days.includes(targetDay)) return false;
+      const start = new Date(chore.startDate + 'T00:00:00');
+      start.setHours(0, 0, 0, 0);
+      const startSun = new Date(start);
+      startSun.setDate(startSun.getDate() - startSun.getDay());
+
+      const targetSun = new Date(today);
+      targetSun.setHours(0, 0, 0, 0);
+      targetSun.setDate(targetSun.getDate() - targetSun.getDay());
+
+      const daysDiff = Math.round((targetSun - startSun) / (24 * 60 * 60 * 1000));
+      const weeksDiff = Math.floor(daysDiff / 7);
+      return weeksDiff % 2 === 0;
+    }
+
+    return true;
+  };
+
   const kids = members.filter(m => m.participatesInChores && isHereToday(m));
   
-  const assignedChores = chores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
-  const bonusChores = chores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
+  // Filter active chores for today only
+  const todayActiveChores = chores.filter(c => isChoreScheduledForToday(c));
+  const assignedChores = todayActiveChores.filter(c => c.assignedTo && c.assignedTo !== 'unassigned');
+  const bonusChores = todayActiveChores.filter(c => !c.assignedTo || c.assignedTo === 'unassigned');
 
   const handleChoreClick = (chore) => {
-    const isDone = completions[chore.id];
+    const isDone = Boolean(completions[chore.id]);
 
     if (!isDone && (chore.assignedTo === 'unassigned' || !chore.assignedTo)) {
       setClaimingChore(chore);
       return;
     }
 
-    if (isDone && chore.assignedTo === 'unassigned') {
-      alert("Bonus chores cannot currently be unchecked. Admin feature coming soon.");
+    if (isDone && (chore.assignedTo === 'unassigned' || !chore.assignedTo)) {
+      const claimerId = completions[`${chore.id}_claimer`];
+      if (claimerId) {
+        toggleCompletion(chore, claimerId, true);
+      }
       return;
     }
 
     toggleCompletion(chore, chore.assignedTo, isDone);
 
     if (!isDone && chore.assignedTo) {
+      // Play kid's signature sound if audio is not muted
+      if (!isMuted) {
+        const member = members.find(m => m.id === chore.assignedTo);
+        if (member?.signatureSound) {
+          const audio = new Audio(member.signatureSound);
+          audio.play().catch(e => console.log('Chore sound error:', e));
+        }
+      }
+
+      // Check if this was the last assigned chore for the kid today
       const kidChores = assignedChores.filter(c => c.assignedTo === chore.assignedTo);
       const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
       
@@ -78,7 +136,9 @@ export default function ChoresPanel() {
   };
 
   const renderChore = (chore) => {
-    const isDone = completions[chore.id];
+    const isDone = Boolean(completions[chore.id]);
+    const claimerId = completions[`${chore.id}_claimer`];
+    const claimer = claimerId ? members.find(m => m.id === claimerId) : null;
     
     return (
       <div 
@@ -99,7 +159,9 @@ export default function ChoresPanel() {
               {chore.name}
             </div>
             <div className="text-xs text-slate-400 mt-0.5">
-              {chore.assignedTo === 'unassigned' ? '⭐ Bonus' : members.find(m => m.id === chore.assignedTo)?.name}
+              {chore.assignedTo === 'unassigned' || !chore.assignedTo 
+                ? (isDone && claimer ? `Claimed by ${claimer.name}` : '⭐ Bonus (Anyone)')
+                : members.find(m => m.id === chore.assignedTo)?.name}
             </div>
           </div>
         </div>
@@ -116,7 +178,7 @@ export default function ChoresPanel() {
         <span>📋</span> Today's Chores
       </h2>
       
-      <div className="flex flex-col gap-5 overflow-y-auto pr-2 pb-4">
+      <div className="flex flex-col gap-5 overflow-y-auto pr-2 pb-4 custom-scrollbar">
         {kids.map(kid => {
           const kidChores = assignedChores.filter(c => c.assignedTo === kid.id);
           if (kidChores.length === 0) return null;
@@ -146,6 +208,12 @@ export default function ChoresPanel() {
             </div>
           </div>
         )}
+
+        {todayActiveChores.length === 0 && (
+          <div className="text-center text-slate-400 py-8 font-medium">
+            No chores scheduled for today! 🎉
+          </div>
+        )}
       </div>
 
       {/* Mini "Who did this?" Modal for Bonus Chores */}
@@ -153,12 +221,12 @@ export default function ChoresPanel() {
         <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl z-10 flex flex-col items-center justify-center p-4 text-center">
           <h3 className="text-xl font-bold text-slate-800 mb-1">Who did this?</h3>
           <p className="text-sm text-slate-500 mb-4 font-medium">{claimingChore.name}</p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-62.5">
+          <div className="grid grid-cols-2 gap-3 w-full max-w-[250px]">
             {kids.map(kid => (
               <button
                 key={kid.id}
                 onClick={() => handleClaimBonus(kid.id)}
-                className="py-3 px-2 rounded-xl font-bold text-white shadow-sm transition-transform hover:scale-105"
+                className="py-3 px-2 rounded-xl font-bold text-white shadow-sm transition-transform hover:scale-105 cursor-pointer"
                 style={{ backgroundColor: kid.color }}
               >
                 {kid.name}
@@ -167,14 +235,14 @@ export default function ChoresPanel() {
           </div>
           <button 
             onClick={() => setClaimingChore(null)}
-            className="mt-4 text-sm font-bold text-slate-400 hover:text-slate-600"
+            className="mt-4 text-sm font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
           >
             Cancel
           </button>
         </div>
       )}
 
-      {/* THE NEW MISSION COMPLETE MODAL (Teleported via Portal) */}
+      {/* Mission Complete Modal */}
       {celebratingKid && createPortal(
         <div
           onClick={() => setCelebratingKid(null)}
@@ -182,7 +250,6 @@ export default function ChoresPanel() {
           style={{ zIndex: 100001 }}
         >
           <div className="text-center animate-bounce-in">
-            {/* Glowing Avatar */}
             <div 
               className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-2xl transition-transform hover:scale-110"
               style={{ 
@@ -197,12 +264,10 @@ export default function ChoresPanel() {
               )}
             </div>
             
-            {/* Mission Complete Text */}
             <div className="text-2xl font-black text-amber-400 uppercase tracking-widest mb-2 drop-shadow-md">
               Mission Complete!
             </div>
             
-            {/* Kid's Name with Glow */}
             <div 
               className="text-5xl font-black text-white mb-2 tracking-tight"
               style={{ textShadow: `0 0 30px ${celebratingKid.color || '#cbd5e1'}` }}
@@ -214,7 +279,6 @@ export default function ChoresPanel() {
               All chores done for today! 🎉
             </div>
             
-            {/* Points Pill (Accurately Synced) */}
             <div 
               className="inline-block text-white px-8 py-3 rounded-full text-2xl font-black shadow-xl border-2 border-white/20"
               style={{ 

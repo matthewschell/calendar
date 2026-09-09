@@ -15,12 +15,10 @@ export function useKiosk() {
   const [isQuietTime, setIsQuietTime] = useState(false);
   const [isTemporarilyAwake, setIsTemporarilyAwake] = useState(false);
   
-  // NEW: Check if this specific device is a designated Kiosk Receiver
   const [isKioskDevice, setIsKioskDevice] = useState(() => localStorage.getItem('isKioskDevice') === 'true');
 
   const wakeTimerRef = useRef(null);
 
-  // Sync globally with Firestore
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'kiosk'), (docSnap) => {
       if (docSnap.exists()) {
@@ -30,7 +28,7 @@ export function useKiosk() {
     return () => unsub();
   }, []);
 
-  // Minute-by-Minute schedule checker
+  // Minute-by-Minute schedule checker with safe fallbacks
   useEffect(() => {
     if (!config.quietTimeEnabled) {
       setIsQuietTime(false);
@@ -41,10 +39,13 @@ export function useKiosk() {
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-      const [startH, startM] = config.quietTimeStart.split(':').map(Number);
+      const startTime = config.quietTimeStart || '20:00';
+      const endTime = config.quietTimeEnd || '07:00';
+
+      const [startH, startM] = startTime.split(':').map(Number);
       const startMinutes = startH * 60 + startM;
 
-      const [endH, endM] = config.quietTimeEnd.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
       const endMinutes = endH * 60 + endM;
 
       let active = false;
@@ -61,7 +62,6 @@ export function useKiosk() {
     return () => clearInterval(interval);
   }, [config.quietTimeEnabled, config.quietTimeStart, config.quietTimeEnd]);
 
-  // Wake-on-Tap Inactivity Timer (Only runs if this is a Kiosk!)
   useEffect(() => {
     if (!isKioskDevice) return; 
 
@@ -85,15 +85,12 @@ export function useKiosk() {
     };
   }, [isKioskDevice]);
 
-  // Toggle this specific device's role
   const toggleKioskMode = (enabled) => {
     localStorage.setItem('isKioskDevice', enabled);
     setIsKioskDevice(enabled);
   };
 
   const isBaseDimmed = config.manualDim || isQuietTime;
-  
-  // The device ONLY dims or mutes if it has Kiosk Mode enabled locally
   const isDimmed = isKioskDevice ? (isBaseDimmed && !isTemporarilyAwake) : false;
   const isMuted = isKioskDevice ? (config.manualMute || isQuietTime) : false;
 

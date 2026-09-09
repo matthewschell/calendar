@@ -13,8 +13,14 @@ export function useDailyCompletions() {
     const q = query(collection(db, 'completions'), where('date', '==', todayStr));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const comps = {};
-      snapshot.forEach(doc => {
-        comps[doc.data().choreId] = true;
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.choreId) {
+          comps[data.choreId] = true;
+          if (data.completedBy) {
+            comps[`${data.choreId}_claimer`] = data.completedBy;
+          }
+        }
       });
       setCompletions(comps);
       setLoading(false);
@@ -23,6 +29,7 @@ export function useDailyCompletions() {
   }, [todayStr]);
 
   const toggleCompletion = async (chore, memberId, isCurrentlyDone) => {
+    if (!memberId) return;
     const currentTodayStr = new Date().toDateString();
     const compId = `${chore.id}-${currentTodayStr}`;
     const compRef = doc(db, 'completions', compId);
@@ -33,7 +40,7 @@ export function useDailyCompletions() {
 
     if (isCurrentlyDone) {
       batch.delete(compRef);
-      batch.update(memberRef, { points: increment(-numericPoints) });
+      batch.set(memberRef, { points: increment(-numericPoints) }, { merge: true });
     } else {
       batch.set(compRef, {
         choreId: chore.id,
@@ -42,7 +49,7 @@ export function useDailyCompletions() {
         points: numericPoints,
         timestamp: new Date()
       });
-      batch.update(memberRef, { points: increment(numericPoints) });
+      batch.set(memberRef, { points: increment(numericPoints) }, { merge: true });
     }
 
     try {
