@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export const THEME_PRESETS = [
@@ -23,32 +23,76 @@ export const FONT_OPTIONS = [
   { id: 'rubik',     label: 'Rubik (Soft)',      css: '"Rubik", sans-serif', google: 'Rubik:wght@400;500;600;700' }
 ];
 
+const DEFAULT_THEME = {
+  preset: 'default',
+  bgImageUrl: '',
+  bgColor: '#667eea',
+  fontColor: '#1f2937',
+  fontFamily: 'system',
+  bgPositionDesktop: 50,
+  bgPositionMobile: 50,
+  panelOpacity: 90,
+  panelBlur: 8
+};
+
 export function useTheme() {
-  const [theme, setTheme] = useState({
-    preset: 'default',
-    bgImageUrl: '',
-    bgColor: '#667eea',
-    fontColor: '#1f2937',
-    fontFamily: 'system',
-    bgPositionDesktop: 50,
-    bgPositionMobile: 50,
-    panelOpacity: 90,
-    panelBlur: 8
-  });
+  const [theme, setTheme] = useState(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'systemSettings', 'appTheme'), (docSnap) => {
-      if (docSnap.exists()) {
-        setTheme(prev => ({ ...prev, ...docSnap.data() }));
+    let isMounted = true;
+    const primaryRef = doc(db, 'settings', 'theme');
+    const legacyRef = doc(db, 'systemSettings', 'appTheme');
+
+    // Listen to primary settings/theme first
+    const unsub = onSnapshot(primaryRef, 
+      (docSnap) => {
+        if (!isMounted) return;
+        if (docSnap.exists()) {
+          setTheme(prev => ({ ...prev, ...docSnap.data() }));
+          setLoading(false);
+        } else {
+          // Check legacy path if primary is empty
+          getDoc(legacyRef).then(legacySnap => {
+            if (!isMounted) return;
+            if (legacySnap.exists()) {
+              setTheme(prev => ({ ...prev, ...legacySnap.data() }));
+            }
+            setLoading(false);
+          }).catch(() => {
+            if (isMounted) setLoading(false);
+          });
+        }
+      },
+      (error) => {
+        console.warn("Theme listener fallback:", error);
+        getDoc(legacyRef).then(legacySnap => {
+          if (!isMounted) return;
+          if (legacySnap.exists()) {
+            setTheme(prev => ({ ...prev, ...legacySnap.data() }));
+          }
+          setLoading(false);
+        }).catch(() => {
+          if (isMounted) setLoading(false);
+        });
       }
-      setLoading(false);
-    });
-    return () => unsub();
+    );
+
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, []);
 
   const saveTheme = async (newTheme) => {
-    await setDoc(doc(db, 'systemSettings', 'appTheme'), newTheme, { merge: true });
+    try {
+      await setDoc(doc(db, 'settings', 'theme'), newTheme, { merge: true });
+    } catch (e) {
+      console.error("Error saving theme:", e);
+    }
+    try {
+      await setDoc(doc(db, 'systemSettings', 'appTheme'), newTheme, { merge: true });
+    } catch (e) {}
   };
 
   return { theme, loading, saveTheme };

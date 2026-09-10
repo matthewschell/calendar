@@ -1,54 +1,108 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useKiosk } from './useKiosk';
+import { playAudio } from '../utils/audioPlayer';
 import confetti from 'canvas-confetti';
 
-const DEFAULT_SETTINGS = {
-  duration: 5,
-  soundUrl: 'https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/Mario%20Bros%20Flagpole.mp3',
+export const EFFECTS = [
+  { id: 'realistic-burst', label: '💥 Realistic Burst' },
+  { id: 'cannons', label: '🎉 Side Cannons' },
+  { id: 'fireworks', label: '⭐ Fireworks' },
+  { id: 'rain', label: '🎊 Confetti Rain' },
+  { id: 'snow', label: '❄️ Drifting Snow' },
+  { id: 'center-burst', label: '🎆 Center Spinner' },
+  { id: 'emoji', label: '😀 Custom Emoji / Character' }
+];
+
+export const CELEB_PALETTES = [
+  { id: 'rainbow', label: 'Rainbow', colors: ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#8b5cf6', '#d946ef'] },
+  { id: 'gold', label: 'Gold & Silver', colors: ['#FFD700', '#FFA500', '#DAA520', '#F8F8FF', '#C0C0C0'] },
+  { id: 'neon', label: 'Neon Cyber', colors: ['#FF1493', '#00FFFF', '#39FF14', '#FF00FF'] },
+  { id: 'pastel', label: 'Spring Pastels', colors: ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9', '#bae1ff'] },
+  { id: 'blizzard', label: 'Winter Blizzard', colors: ['#ffffff', '#e0f2fe', '#bae6fd', '#7dd3fc'] },
+  { id: 'schell', label: 'Schell Family', colors: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'] }
+];
+
+export const DEFAULT_CELEBRATION = {
+  type: 'particles', 
+  videoUrl: '',
+  duration: 0, // 0 = Auto (Play until media finishes)
+  soundUrl: '',
   layers: [
-    { type: 'cannons', colors: ['#667eea', '#764ba2', '#fbbf24', '#10b981', '#ef4444'], scale: 1, intensity: 1 },
-    { type: 'fireworks', colors: ['#FFD700', '#FFA500', '#FF4500', '#ffffff'], scale: 2.5, intensity: 1.5 }
+    { type: 'cannons', colors: CELEB_PALETTES[0].colors, scale: 1, intensity: 1 },
+    { type: 'fireworks', colors: CELEB_PALETTES[1].colors, scale: 2.5, intensity: 1.5 }
   ]
 };
 
 export function useCelebration() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState(DEFAULT_CELEBRATION);
   const [loading, setLoading] = useState(true);
-  const audioRef = useRef(null);
   const { isMuted } = useKiosk();
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'systemSettings', 'celebrations'), (docSnap) => {
-      if (docSnap.exists()) {
-        setSettings({ ...DEFAULT_SETTINGS, ...docSnap.data() });
-      } else {
-        setSettings(DEFAULT_SETTINGS);
-      }
+    let isMounted = true;
+    const unsub = onSnapshot(doc(db, 'settings', 'celebrations'), (docSnap) => {
+      if (!isMounted) return;
+      if (docSnap.exists()) setSettings({ ...DEFAULT_CELEBRATION, ...docSnap.data() });
       setLoading(false);
+    }, () => {
+      if (isMounted) setLoading(false);
     });
-    return () => unsub();
+    return () => { isMounted = false; unsub(); };
   }, []);
 
   const saveSettings = async (newSettings) => {
-    await setDoc(doc(db, 'systemSettings', 'celebrations'), newSettings);
+    await setDoc(doc(db, 'settings', 'celebrations'), newSettings, { merge: true });
   };
 
-  const triggerCelebration = (overrideSettings = null) => {
-    const config = overrideSettings || settings;
-    const durationMs = config.duration * 1000;
-    const end = Date.now() + durationMs;
+  const triggerCelebration = (overrideConfig = null) => {
+    const config = overrideConfig || settings;
+    const isAuto = config.duration === 0;
+    
+    let isPlaying = true;
+    let fallbackTimer;
 
-    // Respect kiosk muting
+    if (!isAuto) {
+      fallbackTimer = setTimeout(() => { isPlaying = false; }, config.duration * 1000);
+    }
+
+    // --- VIDEO CELEBRATION ENGINE ---
+    if (config.type === 'video' && config.videoUrl) {
+      const vid = document.createElement('video');
+      vid.src = config.videoUrl;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.muted = isMuted; 
+      vid.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 100005; pointer-events: none; background: black;";
+      
+      document.body.appendChild(vid);
+      
+      vid.onended = () => {
+        isPlaying = false;
+        if (document.body.contains(vid)) vid.remove();
+      };
+      
+      const maxTime = isAuto ? 30000 : (config.duration * 1000 + 1000);
+      setTimeout(() => {
+        isPlaying = false;
+        if (document.body.contains(vid)) vid.remove();
+      }, maxTime); 
+
+      return; 
+    }
+
+    // --- PARTICLE CELEBRATION ENGINE ---
+    let audioHandled = false;
     if (config.soundUrl && !isMuted) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      audioRef.current = new Audio(config.soundUrl);
-      audioRef.current.volume = 1.0;
-      audioRef.current.play().catch(e => console.log("Audio play blocked by browser:", e));
+      audioHandled = true;
+      playAudio(config.soundUrl, () => {
+        if (isAuto) isPlaying = false;
+      });
+    }
+
+    if (isAuto && !audioHandled) {
+      setTimeout(() => { isPlaying = false; }, 4000);
     }
 
     const activeLayers = config.layers || [];
@@ -56,82 +110,68 @@ export function useCelebration() {
     activeLayers.forEach(layer => {
       const pCount = Math.max(1, Math.round(5 * layer.intensity)); 
       
-      if (layer.type === 'cannons') {
+      const customShape = layer.type === 'emoji' && layer.emojiChar 
+        ? confetti.shapeFromText({ text: layer.emojiChar, scalar: layer.scale * 2 }) 
+        : null;
+
+      const launchConfetti = (opts) => {
+        confetti({
+          ...opts,
+          colors: layer.colors,
+          scalar: layer.type === 'emoji' ? 1 : layer.scale, 
+          shapes: customShape ? [customShape] : (layer.type === 'fireworks' ? ['star'] : ['square', 'circle']),
+          zIndex: 100002
+        });
+      };
+
+      if (layer.type === 'cannons' || layer.type === 'emoji') {
         const frame = () => {
-          confetti({ particleCount: pCount, angle: 60, spread: 55, origin: { x: 0 }, colors: layer.colors, scalar: layer.scale, zIndex: 100002 });
-          confetti({ particleCount: pCount, angle: 120, spread: 55, origin: { x: 1 }, colors: layer.colors, scalar: layer.scale, zIndex: 100002 });
-          if (Date.now() < end) requestAnimationFrame(frame);
+          launchConfetti({ particleCount: pCount, angle: 60, spread: 55, origin: { x: 0 } });
+          launchConfetti({ particleCount: pCount, angle: 120, spread: 55, origin: { x: 1 } });
+          if (isPlaying) requestAnimationFrame(frame);
         };
         frame();
       } 
       else if (layer.type === 'fireworks') {
-        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+        const r = (min, max) => Math.random() * (max - min) + min;
         const interval = setInterval(() => {
-          if (Date.now() > end) return clearInterval(interval);
-          const fireworkCount = Math.round(6 * layer.intensity);
-          confetti({
-            particleCount: fireworkCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
-            decay: 0.92, scalar: layer.scale, shapes: ['star'], colors: layer.colors,
-            ticks: 200, gravity: 0.8, origin: { x: randomInRange(0.1, 0.4), y: 0.9 }, zIndex: 100002,
-          });
-          confetti({
-            particleCount: fireworkCount, angle: randomInRange(55, 125), spread: 60, startVelocity: randomInRange(55, 75),
-            decay: 0.92, scalar: layer.scale, shapes: ['star'], colors: layer.colors,
-            ticks: 200, gravity: 0.8, origin: { x: randomInRange(0.6, 0.9), y: 0.9 }, zIndex: 100002,
-          });
+          if (!isPlaying) return clearInterval(interval);
+          launchConfetti({ particleCount: Math.round(6 * layer.intensity), angle: r(55, 125), spread: 60, startVelocity: r(55, 75), decay: 0.92, gravity: 0.8, ticks: 200, origin: { x: r(0.1, 0.4), y: 0.9 } });
+          launchConfetti({ particleCount: Math.round(6 * layer.intensity), angle: r(55, 125), spread: 60, startVelocity: r(55, 75), decay: 0.92, gravity: 0.8, ticks: 200, origin: { x: r(0.6, 0.9), y: 0.9 } });
         }, 400);
       }
       else if (layer.type === 'rain') {
         const frame = () => {
-          confetti({ particleCount: pCount, angle: 270, startVelocity: 25, origin: { y: -0.1, x: Math.random() }, colors: layer.colors, scalar: layer.scale, zIndex: 100002, spread: 45, gravity: 1 });
-          if (Date.now() < end) requestAnimationFrame(frame);
+          launchConfetti({ particleCount: pCount, angle: 270, startVelocity: 25, origin: { y: -0.1, x: Math.random() }, spread: 45, gravity: 1 });
+          if (isPlaying) requestAnimationFrame(frame);
         };
         frame();
       }
       else if (layer.type === 'snow') {
-        const randomInRange = (min, max) => Math.random() * (max - min) + min;
         const frame = () => {
-          confetti({ 
-            particleCount: pCount, 
-            startVelocity: 0, 
-            origin: { y: -0.1, x: Math.random() }, 
-            colors: layer.colors, 
-            scalar: layer.scale * randomInRange(0.6, 1.2), 
-            shapes: ['circle'], 
-            zIndex: 100002, 
-            gravity: randomInRange(0.2, 0.5), 
-            drift: randomInRange(-0.6, 0.6), 
-            ticks: 300 
-          });
-          if (Date.now() < end) requestAnimationFrame(frame);
+          launchConfetti({ particleCount: pCount, startVelocity: 0, origin: { y: -0.1, x: Math.random() }, shapes: ['circle'], gravity: Math.random() * 0.3 + 0.2, drift: Math.random() * 1.2 - 0.6, ticks: 300 });
+          if (isPlaying) requestAnimationFrame(frame);
         };
         frame();
       }
       else if (layer.type === 'realistic-burst') {
         const fireBurst = () => {
-            const baseCount = Math.round(150 * layer.intensity);
-            const burstParams = { origin: { y: 0.6, x: 0.5 }, colors: layer.colors, scalar: layer.scale, zIndex: 100002 };
-            
-            confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.25), spread: 26, startVelocity: 55 });
-            confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.2), spread: 60 });
-            confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.35), spread: 100, decay: 0.91, scalar: layer.scale * 0.8 });
-            confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.1), spread: 120, startVelocity: 25, decay: 0.92, scalar: layer.scale * 1.2 });
-            confetti({ ...burstParams, particleCount: Math.floor(baseCount * 0.1), spread: 120, startVelocity: 45 });
+            const b = Math.round(150 * layer.intensity);
+            const opts = { origin: { y: 0.6, x: 0.5 } };
+            launchConfetti({ ...opts, particleCount: Math.floor(b * 0.25), spread: 26, startVelocity: 55 });
+            launchConfetti({ ...opts, particleCount: Math.floor(b * 0.2), spread: 60 });
+            launchConfetti({ ...opts, particleCount: Math.floor(b * 0.35), spread: 100, decay: 0.91 });
         };
-        
         fireBurst();
         const interval = setInterval(() => {
-          if (Date.now() > end) return clearInterval(interval);
+          if (!isPlaying) return clearInterval(interval);
           fireBurst();
         }, 1500);
       }
       else if (layer.type === 'center-burst') {
         const interval = setInterval(() => {
-          if (Date.now() > end) return clearInterval(interval);
-          confetti({
-            particleCount: Math.round(50 * layer.intensity), spread: 360, startVelocity: 45,
-            colors: layer.colors, scalar: layer.scale, origin: { x: 0.5, y: 0.5 }, zIndex: 100002
-          });
+          if (!isPlaying) return clearInterval(interval);
+          launchConfetti({ particleCount: Math.round(50 * layer.intensity), spread: 360, startVelocity: 45, origin: { x: 0.5, y: 0.5 } });
         }, 800);
       }
     });

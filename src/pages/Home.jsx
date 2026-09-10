@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import MessageCentre from '../components/dashboard/MessageCentre';
 import DailyContent from '../components/dashboard/DailyContent';
 import Leaderboard from '../components/dashboard/Leaderboard';
@@ -6,43 +8,102 @@ import CalendarGrid from '../components/calendar/CalendarGrid';
 import ChoresPanel from '../components/chores/ChoresPanel';
 import AdminModal from '../components/admin/AdminModal';
 import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../hooks/useTheme';
+import { preloadEntireLibrary } from '../utils/audioPlayer';
 
 export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false);
   const { theme } = useTheme();
+  const [previewTheme, setPreviewTheme] = useState(null);
 
-  const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
-
+  // --- Silent Background Audio Caching ---
   useEffect(() => {
-    const handleOverrideChange = () => {
-      setLocalOverride(localStorage.getItem('bgPositionOverride'));
+    const cacheLibrary = async () => {
+      try {
+        const shortSnap = await getDoc(doc(db, 'settings', 'sounds'));
+        const celebSnap = await getDoc(doc(db, 'settings', 'celebSounds'));
+        
+        let urlsToCache = ["https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/ding.mp3"];
+        
+        if (shortSnap.exists() && shortSnap.data().items) {
+          urlsToCache = [...urlsToCache, ...shortSnap.data().items.map(s => s.url)];
+        }
+        if (celebSnap.exists() && celebSnap.data().items) {
+          urlsToCache = [...urlsToCache, ...celebSnap.data().items.map(s => s.url)];
+        }
+        
+        preloadEntireLibrary(urlsToCache);
+      } catch (e) {
+        console.warn("Background sync paused:", e);
+      }
     };
-    window.addEventListener('localBgOverrideChanged', handleOverrideChange);
-    return () => window.removeEventListener('localBgOverrideChanged', handleOverrideChange);
+    
+    const timer = setTimeout(cacheLibrary, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
-  const activePreset = THEME_PRESETS.find(p => p.id === theme?.preset) || THEME_PRESETS[0];
-  const isCustom = theme?.preset === 'custom';
+  // --- Live Preview Listener ---
+  useEffect(() => {
+    const handlePreview = (e) => setPreviewTheme(e.detail);
+    window.addEventListener('themePreviewUpdate', handlePreview);
+    return () => window.removeEventListener('themePreviewUpdate', handlePreview);
+  }, []);
+
+  // --- Jump from Quick Add to Admin Chores ---
+  useEffect(() => {
+    const handleOpenAdmin = () => setShowAdmin(true);
+    window.addEventListener('openAdminToChores', handleOpenAdmin);
+    return () => window.removeEventListener('openAdminToChores', handleOpenAdmin);
+  }, []);
+
+  // --- Multi-tap invisible admin trigger (5 taps in 2.5s) ---
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef(null);
+
+  const handleHiddenAdminTap = () => {
+    tapCountRef.current += 1;
+    
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, 2500);
+
+    if (tapCountRef.current >= 5) {
+      tapCountRef.current = 0;
+      clearTimeout(tapTimerRef.current);
+      setShowAdmin(true);
+    }
+  };
+
+  const activeTheme = previewTheme || theme;
+  const activePreset = THEME_PRESETS.find(p => p.id === activeTheme?.preset) || THEME_PRESETS[0];
+  const isCustom = activeTheme?.preset === 'custom';
   
   let bgStyle = '';
-  if (isCustom) {
-    if (theme?.bgImageUrl) {
-      bgStyle = `background-image: url(${theme.bgImageUrl}); background-color: ${theme.bgColor || '#667eea'};`;
-    } else {
-      bgStyle = `background: ${theme?.bgColor || '#667eea'};`;
-    }
+  const imgUrlToUse = previewTheme?.bgPreview || activeTheme?.bgImageUrl;
+
+  if (imgUrlToUse) {
+    bgStyle = `background-image: url("${imgUrlToUse}"); background-color: ${activeTheme?.bgColor || '#667eea'};`;
+  } else if (isCustom) {
+    bgStyle = `background: ${activeTheme?.bgColor || '#667eea'};`;
   } else {
     bgStyle = `background: ${activePreset.bg};`;
   }
   
-  const activeFontColor = isCustom ? (theme?.fontColor || '#1f2937') : activePreset.font;
-  const activeFont = FONT_OPTIONS.find(f => f.id === theme?.fontFamily) || FONT_OPTIONS[0];
-  const panelRgba = `rgba(255, 255, 255, ${(theme?.panelOpacity ?? 90) / 100})`;
-  const panelBlur = `${theme?.panelBlur ?? 8}px`;
+  const activeFontColor = isCustom ? (activeTheme?.fontColor || '#1f2937') : activePreset.font;
+  const activeFont = FONT_OPTIONS.find(f => f.id === activeTheme?.fontFamily) || FONT_OPTIONS[0];
+  const panelRgba = `rgba(255, 255, 255, ${(activeTheme?.panelOpacity ?? 90) / 100})`;
+  const panelBlur = `${activeTheme?.panelBlur ?? 8}px`;
+
+  const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
+  useEffect(() => {
+    const handleOverrideChange = () => setLocalOverride(localStorage.getItem('bgPositionOverride'));
+    window.addEventListener('localBgOverrideChanged', handleOverrideChange);
+    return () => window.removeEventListener('localBgOverrideChanged', handleOverrideChange);
+  }, []);
 
   const localOverrideActive = localOverride !== null && localOverride !== '';
-  const effectiveDesktopPos = localOverrideActive ? localOverride : (theme?.bgPositionDesktop ?? 50);
-  const effectiveMobilePos = localOverrideActive ? localOverride : (theme?.bgPositionMobile ?? 50);
+  const effectiveDesktopPos = localOverrideActive ? localOverride : (activeTheme?.bgPositionDesktop ?? 50);
+  const effectiveMobilePos = localOverrideActive ? localOverride : (activeTheme?.bgPositionMobile ?? 50);
 
   return (
     <>
@@ -53,6 +114,7 @@ export default function Home() {
           background-size: cover;
           background-attachment: fixed;
           font-family: ${activeFont.css};
+          transition: background 0.3s ease;
         }
         @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
         @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
@@ -66,11 +128,9 @@ export default function Home() {
       
       <div className="min-h-screen w-full p-4 md:p-6 flex flex-col h-screen overflow-hidden relative">
         <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5">
-          {/* Calendar takes 2 flex units (2/3 of desktop width) */}
           <div className="flex-[2] flex flex-col min-h-0">
             <CalendarGrid />
           </div>
-          {/* Sidebar takes 1 flex unit (1/3 of desktop width) */}
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4 hide-scrollbar">
             <MessageCentre />
             <DailyContent />
@@ -79,14 +139,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* High-contrast, touch-friendly Admin button */}
-        <button 
-          onClick={() => setShowAdmin(true)} 
-          className="fixed bottom-3 left-3 p-2.5 bg-slate-900/40 hover:bg-slate-900/70 backdrop-blur-md rounded-xl text-white transition-all z-40 text-lg hover:rotate-90 shadow-md cursor-pointer border border-white/20"
-          title="Admin Settings"
-        >
-          ⚙️
-        </button>
+        <div 
+          onClick={handleHiddenAdminTap}
+          className="fixed bottom-0 left-0 w-16 h-16 z-40 cursor-default select-none bg-transparent"
+          title=""
+          aria-hidden="true"
+        />
 
         <AdminModal isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
       </div>

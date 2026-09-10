@@ -1,8 +1,12 @@
-// src/config/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database'; // Old legacy DB
-import { getFirestore } from 'firebase/firestore'; // New atomic DB
-import { getStorage } from 'firebase/storage'; // Added for the new Avatar uploads
+import { getDatabase } from 'firebase/database';
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth'; // <-- NEW
 
 const firebaseConfig = {
   apiKey: "AIzaSyDg-I2BAuXt2sHDJa-ih-B6z5km8HlOl0U",
@@ -14,10 +18,12 @@ const firebaseConfig = {
   appId: "1:964895867498:web:f69b0c636201303a3e4013"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Export all database instances so our hooks can use them
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+
 export const rtdb = getDatabase(app);
-export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const auth = getAuth(app); // <-- NEW

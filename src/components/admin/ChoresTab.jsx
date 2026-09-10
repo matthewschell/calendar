@@ -29,6 +29,18 @@ export default function ChoresTab() {
     return () => unsub();
   }, []);
 
+  // Catch the baton pass from Quick Add
+  useEffect(() => {
+    const draft = sessionStorage.getItem('draftChore');
+    if (draft) {
+      const parsedDraft = JSON.parse(draft);
+      setNewChore(parsedDraft);
+      setIsAdding(true);
+      setActiveTab('manage');
+      sessionStorage.removeItem('draftChore'); // Delete it so it doesn't stay open forever
+    }
+  }, []);
+
   // Save Allowance Config
   const handleSaveConfig = async () => {
     setSaving(true);

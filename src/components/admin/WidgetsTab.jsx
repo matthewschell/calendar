@@ -33,7 +33,6 @@ function LeaderboardSettings() {
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
-      console.error("Error saving leaderboard settings:", error);
       alert(`Failed to save settings: ${error.message}`);
       setSaveState('idle');
     }
@@ -82,7 +81,7 @@ function LeaderboardSettings() {
           <select 
             value={config.defaultTimeframe}
             onChange={(e) => setConfig({...config, defaultTimeframe: e.target.value})}
-            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 capitalize focus:outline-none focus:border-indigo-500"
+            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 capitalize focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
             {config.enabledTimeframes.map(tf => (
               <option key={tf} value={tf} className="capitalize">{tf}</option>
@@ -105,7 +104,7 @@ function LeaderboardSettings() {
           <button 
             onClick={handleSave}
             disabled={saveState !== 'idle'}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm cursor-pointer ${
               saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             } disabled:opacity-80`}
           >
@@ -125,7 +124,7 @@ function WeatherSettings() {
     lat: 43.8975,
     lon: -78.9429,
     units: 'celsius',
-    displayMode: 'daily',
+    displayMode: 'daily', // Keep for backend safety but remove from UI
     kidFriendly: true
   });
   const [loading, setLoading] = useState(true);
@@ -184,7 +183,6 @@ function WeatherSettings() {
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (error) {
-      console.error("Error saving weather settings:", error);
       alert(`Failed to save settings: ${error.message}`);
       setSaveState('idle');
     }
@@ -214,7 +212,7 @@ function WeatherSettings() {
               onChange={(e) => setCitySearch(e.target.value)}
               className="flex-1 p-3 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-indigo-500"
             />
-            <button type="submit" disabled={isSearching} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+            <button type="submit" disabled={isSearching} className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer">
               <Search className="w-4 h-4" /> {isSearching ? '...' : 'Search'}
             </button>
             
@@ -246,31 +244,17 @@ function WeatherSettings() {
           </div>
         </div>
 
-        {/* Display Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Default View</label>
-            <select 
-              value={config.displayMode}
-              onChange={(e) => setConfig({...config, displayMode: e.target.value})}
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
-            >
-              <option value="daily">7-Day Forecast</option>
-              <option value="hourly">Hourly Forecast</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Temperature Units</label>
-            <select 
-              value={config.units}
-              onChange={(e) => setConfig({...config, units: e.target.value})}
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
-            >
-              <option value="celsius">Celsius (°C)</option>
-              <option value="fahrenheit">Fahrenheit (°F)</option>
-            </select>
-          </div>
+        {/* Removed Display Mode Dropdown here per request */}
+        <div>
+          <label className="block text-sm font-bold text-slate-700 mb-2">Temperature Units</label>
+          <select 
+            value={config.units}
+            onChange={(e) => setConfig({...config, units: e.target.value})}
+            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            <option value="celsius">Celsius (°C)</option>
+            <option value="fahrenheit">Fahrenheit (°F)</option>
+          </select>
         </div>
 
         {/* Kid Friendly Toggle */}
@@ -296,7 +280,7 @@ function WeatherSettings() {
           <button 
             onClick={handleSave}
             disabled={saveState !== 'idle'}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm cursor-pointer ${
               saveState === 'saved' ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             } disabled:opacity-80`}
           >
@@ -336,7 +320,7 @@ function SubTabButton({ active, onClick, icon, label }) {
   return (
     <button 
       onClick={onClick} 
-      className={`flex-1 flex min-w-max items-center justify-center gap-2 py-2 px-4 rounded-lg font-bold text-sm transition-all ${
+      className={`flex-1 flex min-w-max items-center justify-center gap-2 py-2 px-4 rounded-lg font-bold text-sm transition-all cursor-pointer ${
         active ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
       }`}
     >

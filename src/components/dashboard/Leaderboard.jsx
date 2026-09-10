@@ -19,7 +19,9 @@ export default function Leaderboard() {
   
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
-  const [selectedMember, setSelectedMember] = useState(null);
+  
+  // FIX: Track the ID instead of the whole object so it stays live
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
 
   const todayStr = useMidnightTick();
 
@@ -103,7 +105,7 @@ export default function Leaderboard() {
     return () => unsubscribe();
   }, [timeframe, todayStr]); 
 
-  if (membersLoading) return null; // Simplified for brevity
+  if (membersLoading) return null;
 
   const kids = members
     .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
@@ -114,6 +116,9 @@ export default function Leaderboard() {
     .sort((a, b) => b.displayPoints - a.displayPoints);
 
   const isDefaultView = timeframe === widgetConfig.defaultTimeframe;
+  
+  // Grab the live member object for the modal
+  const liveSelectedMember = selectedMemberId ? kids.find(k => k.id === selectedMemberId) : null;
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-100 shrink-0">
@@ -139,7 +144,7 @@ export default function Leaderboard() {
             <button
               key={t}
               onClick={() => setTimeframe(t)}
-              className={`flex-1 text-xs font-bold py-2 px-1 rounded-lg capitalize transition-all duration-300 ${
+              className={`flex-1 text-xs font-bold py-2 px-1 rounded-lg capitalize transition-all duration-300 cursor-pointer ${
                 timeframe === t 
                   ? 'bg-indigo-600 text-white shadow-md scale-105 transform z-10 ring-2 ring-indigo-300/50' 
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-100'
@@ -178,7 +183,7 @@ export default function Leaderboard() {
             return (
               <div 
                 key={kid.id || index}
-                onClick={() => setSelectedMember(kid)}
+                onClick={() => setSelectedMemberId(kid.id)}
                 className="flex items-center justify-between p-3.5 rounded-xl border-2 transition-transform hover:scale-105 bg-white shadow-sm cursor-pointer hover:shadow-md group"
                 style={{ borderColor: `${displayColor}40` }}
               >
@@ -208,7 +213,7 @@ export default function Leaderboard() {
         )}
       </div>
 
-      <MemberProfileModal member={selectedMember} onClose={() => setSelectedMember(null)} />
+      <MemberProfileModal member={liveSelectedMember} onClose={() => setSelectedMemberId(null)} />
     </div>
   );
 }
