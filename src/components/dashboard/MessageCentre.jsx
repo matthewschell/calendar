@@ -1,9 +1,14 @@
 // src/components/dashboard/MessageCentre.jsx
-import { Pin, AlertTriangle, Info, Star, Edit2 } from 'lucide-react';
+import { useRef } from 'react';
+import { Pin, AlertTriangle, Info, Star } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
 
 export default function MessageCentre() {
   const { messageData, loading } = useMessageCentre();
+  
+  // Refs for tracking rapid taps
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef(null);
 
   if (loading) {
     return <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg h-24 animate-pulse"></div>;
@@ -22,10 +27,31 @@ export default function MessageCentre() {
 
   const activeTheme = themes[messageData.type] || themes.info;
 
+  // The secret 3-tap handler
+  const handleSecretTap = () => {
+    tapCountRef.current += 1;
+    
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0; // Reset if they stop tapping for 2 seconds
+    }, 2000);
+
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      clearTimeout(tapTimerRef.current);
+      sessionStorage.setItem('targetAdminTab', 'widgets');
+      sessionStorage.setItem('targetAdminSubTab', 'messages');
+      window.dispatchEvent(new Event('openAdminToMessages'));
+    }
+  };
+
   return (
     <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col`}>
       
-      <div className="flex items-start justify-between mb-2 shrink-0">
+      <div 
+        className="flex items-start justify-between mb-2 shrink-0 cursor-default select-none" 
+        onClick={handleSecretTap}
+      >
         <div className="flex items-center gap-3">
           {messageData.title && (
             <>
@@ -34,18 +60,6 @@ export default function MessageCentre() {
             </>
           )}
         </div>
-        
-        <button 
-          onClick={() => {
-            sessionStorage.setItem('targetAdminTab', 'widgets');
-            sessionStorage.setItem('targetAdminSubTab', 'messages');
-            window.dispatchEvent(new Event('openAdminToMessages'));
-          }}
-          className={`p-1.5 bg-black/5 hover:bg-black/10 rounded-lg transition-colors cursor-pointer ${activeTheme.text} opacity-50 hover:opacity-100 ml-auto`}
-          title="Edit Message"
-        >
-          <Edit2 className="w-5 h-5" />
-        </button>
       </div>
       
       <div 

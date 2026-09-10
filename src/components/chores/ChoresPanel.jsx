@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Circle, Plus, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
@@ -27,6 +27,26 @@ export default function ChoresPanel() {
   const [quickAddState, setQuickAddState] = useState('hidden'); 
   const [pinInput, setPinInput] = useState('');
   const [quickAddForm, setQuickAddForm] = useState({ name: '', points: 10, assignedTo: 'unassigned' });
+
+  // Refs for tracking rapid taps
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef(null);
+
+  // The secret 3-tap handler for Quick Add
+  const handleSecretTap = () => {
+    tapCountRef.current += 1;
+    
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0; // Reset if they stop tapping for 2 seconds
+    }, 2000);
+
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      clearTimeout(tapTimerRef.current);
+      setQuickAddState('pin');
+    }
+  };
 
   // Intelligent Background Caching
   // Only downloads files that are actively assigned to kids or the global celebration
@@ -182,9 +202,11 @@ export default function ChoresPanel() {
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative flex flex-col shrink-0">
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div 
+        className="flex items-center justify-between mb-4 shrink-0 cursor-default select-none"
+        onClick={handleSecretTap}
+      >
         <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><span>📋</span> Today's Chores</h2>
-        <button onClick={() => setQuickAddState('pin')} className="p-1.5 bg-slate-100 hover:bg-indigo-100 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer" title="Quick Add Chore (Admin)"><Plus className="w-5 h-5" /></button>
       </div>
       
       <div className="flex flex-col gap-5">
