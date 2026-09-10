@@ -1,4 +1,3 @@
-// src/components/dashboard/MessageCentre.jsx
 import { useRef } from 'react';
 import { Pin, AlertTriangle, Info, Star } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
@@ -62,8 +61,11 @@ export default function MessageCentre() {
         </div>
       </div>
       
+      {/* The [&_*]:!break-words and !whitespace-normal forcefully strips away 
+        bad formatting pasted from external websites or Word docs! 
+      */}
       <div 
-        className={`${activeTheme.text} text-sm leading-relaxed flex-1 [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-1`}
+        className={`${activeTheme.text} text-sm leading-relaxed flex-1 [&_*]:!whitespace-normal [&_*]:!break-words [&_img]:!max-w-full [&_img]:!h-auto [&_img]:!rounded-lg [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-1`}
         dangerouslySetInnerHTML={{ __html: messageData.content }} 
       />
     </div>

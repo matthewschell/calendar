@@ -75,12 +75,14 @@ export default function MessageTab() {
 
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-2">Message Content</label>
-          <div className="bg-white rounded-xl overflow-hidden border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
+          {/* REMOVED overflow-hidden so dropdowns work, and added focus ring */}
+          <div className="bg-white rounded-xl border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
             <ReactQuill 
               theme="snow" 
               value={formData.content} 
               onChange={(content) => setFormData({ ...formData, content })}
-              className="h-48 border-none"
+              {/* REPLACED fixed h-48 with a dynamic min-height so it expands as you type */}
+              className="border-none [&_.ql-editor]:min-h-[200px]"
             />
           </div>
         </div>
