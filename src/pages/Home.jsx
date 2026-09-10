@@ -120,8 +120,9 @@ export default function Home() {
           font-family: ${activeFont.css};
           transition: background 0.3s ease;
         }
-        @media (min-width: 768px) { body { background-position: center ${effectiveDesktopPos}%; } }
-        @media (max-width: 767px) { body { background-position: ${effectiveMobilePos}% center; } }
+        /* Changed breakpoint to 1024px to match lg: prefix */
+        @media (min-width: 1024px) { body { background-position: center ${effectiveDesktopPos}%; } }
+        @media (max-width: 1023px) { body { background-position: ${effectiveMobilePos}% center; } }
         
         :root {
           --glass-panel-bg: ${panelRgba};
@@ -130,21 +131,18 @@ export default function Home() {
         }
       `}</style>
       
-      {/* REMOVED: h-screen overflow-hidden 
-        ADDED: md:h-screen md:overflow-hidden 
-        This allows mobile to scroll naturally while keeping desktop locked 
-      */}
-      <div className="min-h-screen w-full p-4 md:p-6 flex flex-col md:h-screen md:overflow-hidden relative">
+      {/* Upgraded layout triggers to lg: (1024px) */}
+      <div className="min-h-screen w-full p-4 lg:p-6 flex flex-col lg:h-screen lg:overflow-hidden relative">
         
-        <div className="flex-1 flex flex-col md:flex-row gap-6 md:gap-5 md:min-h-0">
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-5 lg:min-h-0">
           
-          {/* Calendar Side: Unrestricted height on mobile, 2/3 ratio on desktop */}
-          <div className="md:flex-[2] flex flex-col md:min-h-0">
+          {/* Calendar Side: Unrestricted height on mobile, dynamically fills remaining space on desktop */}
+          <div className="flex-1 flex flex-col lg:min-h-0">
             <CalendarGrid />
           </div>
           
-          {/* Widgets Side: Added pb-24 for mobile so the hidden admin tap zone doesn't hide chores */}
-          <div className="md:flex-1 flex flex-col gap-4 md:overflow-y-auto md:pr-2 pb-24 md:pb-4 hide-scrollbar">
+          {/* Widgets Side: Locked to 350px (or 420px on huge screens) so they never squish! */}
+          <div className="flex flex-col gap-4 lg:w-[350px] xl:w-[420px] shrink-0 lg:overflow-y-auto lg:pr-2 pb-24 lg:pb-4 hide-scrollbar">
             <MessageCentre />
             <DailyContent />
             <Leaderboard />
