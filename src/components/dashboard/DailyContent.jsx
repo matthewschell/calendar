@@ -9,7 +9,8 @@ export default function DailyContent() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherConfig, setWeatherConfig] = useState(null);
   
-  const [isForecastExpanded, setIsForecastExpanded] = useState(false);
+  // 'hourly' | 'daily' | null
+  const [expandedView, setExpandedView] = useState(null);
   const [selectedDateString, setSelectedDateString] = useState(null);
   
   const { content, loading: contentLoading } = useDailyContent();
@@ -24,7 +25,6 @@ export default function DailyContent() {
           lat: 43.8975,
           lon: -78.9429,
           units: 'celsius',
-          displayMode: 'daily',
           kidFriendly: true
         });
       }
@@ -120,11 +120,11 @@ export default function DailyContent() {
     );
   }
 
-  let config = { icon: <Lightbulb className="w-4 h-4" />, title: 'Fact of the Day', border: 'border-indigo-400', text: 'text-indigo-400' };
+  let contentMeta = { icon: <Lightbulb className="w-4 h-4" />, title: 'Fact of the Day', border: 'border-indigo-400', text: 'text-indigo-400' };
   if (content.type === 'override') {
-    config = { icon: <Star className="w-4 h-4" />, title: 'Special Day!', border: 'border-amber-400', text: 'text-amber-500' };
+    contentMeta = { icon: <Star className="w-4 h-4" />, title: 'Special Day!', border: 'border-amber-400', text: 'text-amber-500' };
   } else if (content.type === 'joke') {
-    config = { icon: <Smile className="w-4 h-4" />, title: 'Joke of the Day', border: 'border-emerald-400', text: 'text-emerald-500' };
+    contentMeta = { icon: <Smile className="w-4 h-4" />, title: 'Joke of the Day', border: 'border-emerald-400', text: 'text-emerald-500' };
   }
 
   const currentTemp = Math.round(weather?.current?.temperature_2m || 0);
@@ -135,7 +135,8 @@ export default function DailyContent() {
   const tempUnit = weatherConfig.units === 'fahrenheit' ? '°F' : '°C';
   const advice = weather ? getKidFriendlyAdvice(weather?.current?.weather_code, currentTemp) : null;
 
-  const dailyForecast = weather?.daily?.time.slice(1, 7).map((time, i) => ({
+  // 6 additional days from the current day
+  const dailyForecast = weather?.daily?.time?.slice(1, 7).map((time, i) => ({
     dateString: time,
     label: formatDay(time),
     temp: Math.round(weather.daily.temperature_2m_max[i + 1]),
@@ -143,9 +144,22 @@ export default function DailyContent() {
     pop: weather.daily.precipitation_probability_max?.[i + 1] || 0
   })) || [];
 
-  let hourlyForecast = [];
+  // Today's hours (6 AM, 9 AM, 12 PM, 3 PM, 6 PM, 9 PM)
+  const todayIso = weather?.daily?.time?.[0] || new Date().toISOString().slice(0, 10);
+  const todayHourlyForecast = weather?.hourly ? weather.hourly.time
+    .map((t, idx) => ({
+      time: t,
+      temp: Math.round(weather.hourly.temperature_2m[idx]),
+      code: weather.hourly.weather_code[idx],
+      pop: weather.hourly.precipitation_probability?.[idx] || 0
+    }))
+    .filter(d => d.time.startsWith(todayIso))
+    .filter(d => [6, 9, 12, 15, 18, 21].includes(new Date(d.time).getHours())) : [];
+
+  // Hourly breakdown when drilling into a specific day from the 7-day view
+  let selectedDayHourly = [];
   if (selectedDateString && weather?.hourly) {
-    hourlyForecast = weather.hourly.time
+    selectedDayHourly = weather.hourly.time
       .map((t, idx) => ({
         time: t,
         temp: Math.round(weather.hourly.temperature_2m[idx]),
@@ -153,7 +167,7 @@ export default function DailyContent() {
         pop: weather.hourly.precipitation_probability?.[idx] || 0
       }))
       .filter(d => d.time.startsWith(selectedDateString))
-      .filter(d => [8, 12, 16, 20].includes(new Date(d.time).getHours()));
+      .filter(d => [6, 9, 12, 15, 18, 21].includes(new Date(d.time).getHours()));
   }
 
   return (
@@ -162,7 +176,7 @@ export default function DailyContent() {
       <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col">
         <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* Header - Inline Layout */}
+        {/* Header - City & 2 Toggles */}
         <div className="flex items-center justify-between mb-3 relative z-10">
           <div className="flex items-center gap-2">
             <h3 className="text-sky-100 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
@@ -172,28 +186,54 @@ export default function DailyContent() {
             <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wide">{weatherConfig.city}</span>
           </div>
 
-          {/* Inline Expand Button with Invisible Padding */}
-          {dailyForecast.length > 0 && (
+          {/* TWO TOGGLES: Hourly & 7-Day */}
+          <div className="flex items-center gap-1.5">
             <button 
               onClick={() => {
-                setIsForecastExpanded(!isForecastExpanded);
-                if (isForecastExpanded) setSelectedDateString(null);
+                if (expandedView === 'hourly') {
+                  setExpandedView(null);
+                } else {
+                  setExpandedView('hourly');
+                  setSelectedDateString(null);
+                }
               }}
-              className="p-3 -m-3 focus:outline-none group"
-              aria-label="Toggle Forecast"
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
+                expandedView === 'hourly' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'bg-white/15 hover:bg-white/25 text-white'
+              }`}
+              aria-label="Toggle Hourly Forecast"
             >
-              <div className="bg-white/10 group-hover:bg-white/20 px-2 py-1 rounded-md flex items-center gap-1.5 transition-colors text-sky-50 text-[10px] font-bold uppercase tracking-wider">
-                {weatherConfig.displayMode === 'hourly' ? 'Hours' : '6-Day'}
-                <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isForecastExpanded ? 'rotate-180' : ''}`} />
-              </div>
+              <span>Hourly</span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${expandedView === 'hourly' ? 'rotate-180' : ''}`} />
             </button>
-          )}
+
+            <button 
+              onClick={() => {
+                if (expandedView === 'daily') {
+                  setExpandedView(null);
+                  setSelectedDateString(null);
+                } else {
+                  setExpandedView('daily');
+                  setSelectedDateString(null);
+                }
+              }}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
+                expandedView === 'daily' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'bg-white/15 hover:bg-white/25 text-white'
+              }`}
+              aria-label="Toggle 7-Day Forecast"
+            >
+              <span>7-Day</span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${expandedView === 'daily' ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
         </div>
 
-        {/* PERFECT HORIZONTAL ALIGNMENT */}
+        {/* Current Conditions Horizontal Alignment */}
         <div className="relative z-10 flex items-center w-full mt-1">
-          
-          {/* LEFT: Temp & High/Low */}
+          {/* LEFT: Current Temp & High/Low */}
           <div className="flex flex-col justify-center shrink-0 w-[90px] md:w-[110px]">
             <div className="text-5xl md:text-6xl font-black tracking-tighter leading-none flex items-start">
               {currentTemp}<span className="text-xl md:text-2xl text-sky-200 font-bold ml-0.5 mt-1">{tempUnit}</span>
@@ -228,32 +268,22 @@ export default function DailyContent() {
               </div>
             </>
           )}
-
         </div>
 
-        {/* EXPANDED FORECAST CONTAINER */}
-        {isForecastExpanded && (
+        {/* EXPANDED SECTION */}
+        {expandedView && (
           <div className="mt-4 bg-white/10 rounded-xl p-3 overflow-hidden relative z-10 animate-in fade-in slide-in-from-top-2 duration-300">
-            {selectedDateString ? (
-              /* HOURLY DRILL-DOWN VIEW */
-              <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider">
-                    Hourly • {formatDay(selectedDateString)}
-                  </span>
-                  <button 
-                    onClick={() => setSelectedDateString(null)}
-                    className="bg-white/20 hover:bg-white/30 rounded-full p-1 transition-colors"
-                  >
-                    <X className="w-3 h-3 text-white" />
-                  </button>
+            {/* 1. HOURLY TODAY VIEW */}
+            {expandedView === 'hourly' && (
+              <div className="flex flex-col animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="text-[10px] font-bold text-sky-100 uppercase tracking-wider mb-2 px-1">
+                  Today's Hourly Forecast
                 </div>
                 <div className="flex justify-between w-full px-1">
-                  {hourlyForecast.map((data, idx) => (
-                    <div key={idx} className="flex flex-col items-center text-center">
+                  {todayHourlyForecast.map((data, idx) => (
+                    <div key={idx} className="flex flex-col items-center text-center flex-1">
                       <span className="text-[10px] text-sky-100 font-bold uppercase">{formatHourAmPm(data.time)}</span>
                       <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm">{getWeatherEmoji(data.code)}</span>
-                      {/* POP Indicator */}
                       {data.pop >= 20 ? (
                         <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
                           <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
@@ -266,38 +296,78 @@ export default function DailyContent() {
                   ))}
                 </div>
               </div>
-            ) : (
-              /* DEFAULT 6-DAY VIEW */
-              <div className="flex justify-between w-full animate-in fade-in slide-in-from-left-4 duration-300">
-                {dailyForecast.map((data, idx) => (
-                  <div 
-                    key={idx} 
-                    onClick={() => setSelectedDateString(data.dateString)}
-                    className="flex flex-col items-center text-center cursor-pointer hover:bg-white/20 p-2 -m-1 rounded-xl transition-colors group flex-1"
-                  >
-                    <span className="text-[10px] text-sky-100 font-bold uppercase tracking-wider group-hover:text-white transition-colors">{data.label}</span>
-                    <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm group-hover:scale-110 transition-transform">{getWeatherEmoji(data.code)}</span>
-                    {/* POP Indicator */}
-                    {data.pop >= 20 ? (
-                      <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
-                        <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
-                      </span>
-                    ) : (
-                      <span className="h-[14px] mb-1"></span>
-                    )}
-                    <span className="text-sm font-bold text-white">{data.temp}°</span>
+            )}
+
+            {/* 2. 7-DAY (6 ADDITIONAL DAYS) VIEW */}
+            {expandedView === 'daily' && (
+              selectedDateString ? (
+                /* Day Drill-Down View */
+                <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider">
+                      Hourly • {formatDay(selectedDateString)}
+                    </span>
+                    <button 
+                      onClick={() => setSelectedDateString(null)}
+                      className="bg-white/20 hover:bg-white/30 rounded-full p-1 transition-colors cursor-pointer"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
                   </div>
-                ))}
-              </div>
+                  <div className="flex justify-between w-full px-1">
+                    {selectedDayHourly.map((data, idx) => (
+                      <div key={idx} className="flex flex-col items-center text-center flex-1">
+                        <span className="text-[10px] text-sky-100 font-bold uppercase">{formatHourAmPm(data.time)}</span>
+                        <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm">{getWeatherEmoji(data.code)}</span>
+                        {data.pop >= 20 ? (
+                          <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
+                            <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
+                          </span>
+                        ) : (
+                          <span className="h-[14px] mb-1"></span>
+                        )}
+                        <span className="text-sm font-bold text-white">{data.temp}°</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Main 6 Additional Days View */
+                <div className="flex flex-col animate-in fade-in slide-in-from-left-2 duration-300">
+                  <div className="text-[10px] font-bold text-sky-100 uppercase tracking-wider mb-2 px-1">
+                    6-Day Outlook (Tap a day for hourly)
+                  </div>
+                  <div className="flex justify-between w-full">
+                    {dailyForecast.map((data, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => setSelectedDateString(data.dateString)}
+                        className="flex flex-col items-center text-center cursor-pointer hover:bg-white/20 p-2 -m-1 rounded-xl transition-colors group flex-1"
+                      >
+                        <span className="text-[10px] text-sky-100 font-bold uppercase tracking-wider group-hover:text-white transition-colors">{data.label}</span>
+                        <span className="text-xl md:text-2xl mt-1.5 mb-0.5 drop-shadow-sm group-hover:scale-110 transition-transform">{getWeatherEmoji(data.code)}</span>
+                        {data.pop >= 20 ? (
+                          <span className="text-[9px] font-bold text-sky-200 flex items-center mb-1">
+                            <Droplets className="w-2.5 h-2.5 mr-0.5" />{data.pop}%
+                          </span>
+                        ) : (
+                          <span className="h-[14px] mb-1"></span>
+                        )}
+                        <span className="text-sm font-bold text-white">{data.temp}°</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
             )}
           </div>
         )}
       </div>
 
-      {/* FACT OF THE DAY */}
-      <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${config.border}`}>
-        <h3 className={`${config.text} font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2`}>
-          {config.icon} {config.title}
+      {/* FACT / JOKE / OVERRIDE CARD */}
+      <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${contentMeta.border}`}>
+        <h3 className={`${contentMeta.text} font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2`}>
+          {contentMeta.icon} {contentMeta.title}
         </h3>
         <div className="text-slate-700 font-medium text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: content.text }} />
       </div>

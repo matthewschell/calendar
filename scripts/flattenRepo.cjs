@@ -2,11 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration: Folders and files to completely ignore
-const IGNORE_DIRS = ['node_modules', '.git', 'dist', 'public', '.firebase'];
+// Added '.agents' to prevent capturing AI agent skill definitions
+const IGNORE_DIRS = ['node_modules', '.git', 'dist', 'public', '.firebase', '.agents', 'legacy_code', 'dev-dist'];
 const IGNORE_FILES = ['package-lock.json', '.DS_Store', 'repo_snapshot.md'];
 
 // Configuration: Only include files with these extensions to avoid binaries/images
-const ALLOWED_EXTENSIONS = ['.js', '.jsx', '.cjs', '.mjs', '.html', '.css', '.md', '.json'];
+// Added .ts and .tsx to support modern React components
+const ALLOWED_EXTENSIONS = ['.js', '.jsx', '.cjs', '.mjs', '.html', '.css', '.md', '.json', '.ts', '.tsx'];
 
 const OUTPUT_FILE = 'repo_snapshot.md';
 
@@ -65,6 +67,7 @@ function generateMarkdown() {
       
       // Map extensions for better markdown highlighting
       if (ext === 'jsx' || ext === 'cjs') ext = 'javascript';
+      if (ext === 'tsx') ext = 'typescript';
       
       markdownContent += `### \`// ${relativePath}\`\n\n`;
       markdownContent += `\`\`\`${ext}\n`;

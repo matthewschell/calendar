@@ -48,7 +48,7 @@ exports.midnightRolloverEngine = onSchedule({
                  const currentPoints = memberData.points || 0;
                  const payRate = memberData.payRate || 0.01;
                  
-                 const payoutAmount = currentPoints * payRate; 
+                 const payoutAmount = Math.round(currentPoints * payRate * 100) / 100;
                  
                  if (currentPoints > 0) {
                      const payoutRef = db.collection('payouts').doc();

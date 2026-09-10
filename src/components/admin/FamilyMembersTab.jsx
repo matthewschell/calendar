@@ -10,7 +10,6 @@ export default function FamilyMembersTab() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // NEW: Tab Navigation State
   const [activeSubTab, setActiveSubTab] = useState('roster'); // 'roster' | 'avatars' | 'sounds'
 
   const [isEditing, setIsEditing] = useState(false);
@@ -57,7 +56,7 @@ export default function FamilyMembersTab() {
         name: e.target.name.value,
         color: e.target.color.value,
         participatesInChores: e.target.role.value === 'kid',
-        payRate: Number(e.target.payRate.value) || 0,
+        payRate: parseFloat(e.target.payRate.value) || 0,
         pin: e.target.pin.value || '',
         avatar: previewAvatar,
         signatureSound: localSound
@@ -139,6 +138,16 @@ export default function FamilyMembersTab() {
     await setDoc(doc(db, 'settings', 'sounds'), { items: arrayRemove(soundObj) }, { merge: true });
   };
 
+  const formatDisplayRate = (rate) => {
+    if (rate === undefined || rate === null || rate === 0) return '0.00';
+    const num = Number(rate);
+    const str = num.toString();
+    if (str.includes('.') && str.split('.')[1].length > 2) {
+      return num.toFixed(4).replace(/0+$/, '');
+    }
+    return num.toFixed(2);
+  };
+
   if (loading) return <div className="p-4 animate-pulse">Loading members...</div>;
 
   if (isEditing) {
@@ -151,18 +160,37 @@ export default function FamilyMembersTab() {
 
         <form onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label><input name="name" defaultValue={currentMember?.name} required className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500" /></div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label>
+              <input name="name" defaultValue={currentMember?.name} required className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500" />
+            </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
               <select name="role" defaultValue={currentMember?.participatesInChores ? 'kid' : 'parent'} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500 cursor-pointer">
-                <option value="kid">Kid</option><option value="parent">Parent</option>
+                <option value="kid">Kid</option>
+                <option value="parent">Parent</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profile Color</label><input type="color" name="color" defaultValue={currentMember?.color || '#6366f1'} className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer" /></div>
-            <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pay Rate ($/pt)</label><input type="number" step="0.01" name="payRate" defaultValue={currentMember?.payRate || 0} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500" /></div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profile Color</label>
+              <input type="color" name="color" defaultValue={currentMember?.color || '#6366f1'} className="w-full h-[50px] p-1 border border-slate-200 rounded-xl cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pay Rate ($/pt)</label>
+              <input 
+                type="number" 
+                step="any" 
+                min="0"
+                name="payRate" 
+                defaultValue={currentMember?.payRate || 0} 
+                placeholder="e.g. 0.0143"
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500" 
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">Supports sub-cents (e.g. 0.0143 for $10/700pts)</span>
+            </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profile PIN</label>
               <input type="text" maxLength="4" name="pin" defaultValue={currentMember?.pin || ''} placeholder="e.g. 1234" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold focus:border-indigo-500" />
@@ -256,7 +284,7 @@ export default function FamilyMembersTab() {
                     <div className="text-xs font-medium text-slate-500 flex gap-2">
                       <span className="uppercase tracking-wider">{member.participatesInChores ? 'Kid' : 'Parent'}</span>
                       <span>&bull;</span>
-                      <span>Rate: ${member.payRate?.toFixed(2) || '0.00'}</span>
+                      <span>Rate: ${formatDisplayRate(member.payRate)}/pt</span>
                       {member.pin && <span className="text-amber-500 flex items-center gap-1">🔒 Locked</span>}
                     </div>
                   </div>
