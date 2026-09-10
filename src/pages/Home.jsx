@@ -1,4 +1,3 @@
-// src/pages/Home.jsx
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -131,22 +130,32 @@ export default function Home() {
         }
       `}</style>
       
-      <div className="min-h-screen w-full p-4 md:p-6 flex flex-col h-screen overflow-hidden relative">
-        <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5">
-          <div className="flex-[2] flex flex-col min-h-0">
+      {/* REMOVED: h-screen overflow-hidden 
+        ADDED: md:h-screen md:overflow-hidden 
+        This allows mobile to scroll naturally while keeping desktop locked 
+      */}
+      <div className="min-h-screen w-full p-4 md:p-6 flex flex-col md:h-screen md:overflow-hidden relative">
+        
+        <div className="flex-1 flex flex-col md:flex-row gap-6 md:gap-5 md:min-h-0">
+          
+          {/* Calendar Side: Unrestricted height on mobile, 2/3 ratio on desktop */}
+          <div className="md:flex-[2] flex flex-col md:min-h-0">
             <CalendarGrid />
           </div>
-          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-4 hide-scrollbar">
+          
+          {/* Widgets Side: Added pb-24 for mobile so the hidden admin tap zone doesn't hide chores */}
+          <div className="md:flex-1 flex flex-col gap-4 md:overflow-y-auto md:pr-2 pb-24 md:pb-4 hide-scrollbar">
             <MessageCentre />
             <DailyContent />
             <Leaderboard />
             <ChoresPanel />
           </div>
+
         </div>
 
         <div 
           onClick={handleHiddenAdminTap}
-          className="fixed bottom-0 left-0 w-16 h-16 z-40 cursor-default select-none bg-transparent"
+          className="fixed bottom-0 left-0 w-20 h-20 z-40 cursor-default select-none bg-transparent"
           title=""
           aria-hidden="true"
         />
