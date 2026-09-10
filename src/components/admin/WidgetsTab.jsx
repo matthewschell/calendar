@@ -1,3 +1,4 @@
+// src/components/admin/WidgetsTab.jsx
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -124,7 +125,7 @@ function WeatherSettings() {
     lat: 43.8975,
     lon: -78.9429,
     units: 'celsius',
-    displayMode: 'daily', // Keep for backend safety but remove from UI
+    displayMode: 'daily',
     kidFriendly: true
   });
   const [loading, setLoading] = useState(true);
@@ -198,7 +199,6 @@ function WeatherSettings() {
       
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         
-        {/* Location Block */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
           <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-slate-400" /> Set Location
@@ -244,7 +244,6 @@ function WeatherSettings() {
           </div>
         </div>
 
-        {/* Removed Display Mode Dropdown here per request */}
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-2">Temperature Units</label>
           <select 
@@ -257,7 +256,6 @@ function WeatherSettings() {
           </select>
         </div>
 
-        {/* Kid Friendly Toggle */}
         <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
           <div>
             <h4 className="font-bold text-amber-900 flex items-center gap-2">
@@ -295,7 +293,15 @@ function WeatherSettings() {
 }
 
 export default function WidgetsTab() {
-  const [activeSubTab, setActiveSubTab] = useState('leaderboard');
+  // Grab the sub-tab target from routing, default to leaderboard
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    const target = sessionStorage.getItem('targetAdminSubTab');
+    if (target) {
+      sessionStorage.removeItem('targetAdminSubTab');
+      return target;
+    }
+    return 'leaderboard';
+  });
 
   return (
     <div className="flex flex-col h-full gap-5">

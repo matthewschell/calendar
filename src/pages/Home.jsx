@@ -1,3 +1,4 @@
+// src/pages/Home.jsx
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -48,11 +49,15 @@ export default function Home() {
     return () => window.removeEventListener('themePreviewUpdate', handlePreview);
   }, []);
 
-  // --- Jump from Quick Add to Admin Chores ---
+  // --- Jump to Admin Panel Event Listeners ---
   useEffect(() => {
     const handleOpenAdmin = () => setShowAdmin(true);
     window.addEventListener('openAdminToChores', handleOpenAdmin);
-    return () => window.removeEventListener('openAdminToChores', handleOpenAdmin);
+    window.addEventListener('openAdminToMessages', handleOpenAdmin);
+    return () => {
+      window.removeEventListener('openAdminToChores', handleOpenAdmin);
+      window.removeEventListener('openAdminToMessages', handleOpenAdmin);
+    };
   }, []);
 
   // --- Multi-tap invisible admin trigger (5 taps in 2.5s) ---

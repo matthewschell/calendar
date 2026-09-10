@@ -1,4 +1,5 @@
-import { Pin, AlertTriangle, Info, Star } from 'lucide-react';
+// src/components/dashboard/MessageCentre.jsx
+import { Pin, AlertTriangle, Info, Star, Edit2 } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
 
 export default function MessageCentre() {
@@ -23,12 +24,29 @@ export default function MessageCentre() {
 
   return (
     <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col`}>
-      {messageData.title && (
-        <div className="flex items-center gap-3 mb-2 shrink-0">
-          {activeTheme.icon}
-          <h3 className={`font-bold ${activeTheme.text} text-lg`}>{messageData.title}</h3>
+      
+      <div className="flex items-start justify-between mb-2 shrink-0">
+        <div className="flex items-center gap-3">
+          {messageData.title && (
+            <>
+              {activeTheme.icon}
+              <h3 className={`font-bold ${activeTheme.text} text-lg`}>{messageData.title}</h3>
+            </>
+          )}
         </div>
-      )}
+        
+        <button 
+          onClick={() => {
+            sessionStorage.setItem('targetAdminTab', 'widgets');
+            sessionStorage.setItem('targetAdminSubTab', 'messages');
+            window.dispatchEvent(new Event('openAdminToMessages'));
+          }}
+          className={`p-1.5 bg-black/5 hover:bg-black/10 rounded-lg transition-colors cursor-pointer ${activeTheme.text} opacity-50 hover:opacity-100 ml-auto`}
+          title="Edit Message"
+        >
+          <Edit2 className="w-5 h-5" />
+        </button>
+      </div>
       
       <div 
         className={`${activeTheme.text} text-sm leading-relaxed flex-1 [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-1`}

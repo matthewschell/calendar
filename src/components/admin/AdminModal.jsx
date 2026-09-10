@@ -1,3 +1,4 @@
+// src/components/admin/AdminModal.jsx
 import { useState, useEffect } from 'react';
 import { X, Settings, Users, ClipboardList, Palette, Database, LayoutGrid, CalendarDays, Monitor } from 'lucide-react';
 import ThemeTab from './ThemeTab';
@@ -16,9 +17,19 @@ export default function AdminModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('members');
 
   useEffect(() => {
-    if (isOpen && sessionStorage.getItem('adminBypass') === 'true') {
-      setIsAuthenticated(true);
-      setActiveTab('chores'); 
+    if (isOpen) {
+      // Check for a specific target tab routing request
+      const targetTab = sessionStorage.getItem('targetAdminTab');
+      if (targetTab) {
+        setActiveTab(targetTab);
+        sessionStorage.removeItem('targetAdminTab');
+      }
+
+      // If bypassing the PIN entirely (from Quick Add Chore)
+      if (sessionStorage.getItem('adminBypass') === 'true') {
+        setIsAuthenticated(true);
+        if (!targetTab) setActiveTab('chores'); 
+      }
     }
   }, [isOpen]);
 
