@@ -33,7 +33,7 @@ export default function MessageTab() {
         
         <button
           onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all cursor-pointer ${
             formData.isActive 
               ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
               : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -44,7 +44,7 @@ export default function MessageTab() {
         </button>
       </div>
 
-      <div className={`bg-white p-6 rounded-2xl border-2 transition-all shadow-sm space-y-5 ${formData.isActive ? 'border-indigo-100' : 'border-slate-100 opacity-60'}`}>
+      <div className={`bg-white p-6 rounded-2xl border-2 transition-all shadow-sm space-y-5 flex flex-col ${formData.isActive ? 'border-indigo-100' : 'border-slate-100 opacity-60'}`}>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -63,7 +63,7 @@ export default function MessageTab() {
             <select 
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="w-full p-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none font-bold text-slate-700 bg-white"
+              className="w-full p-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none font-bold text-slate-700 bg-white cursor-pointer"
             >
               <option value="info">📘 Info (Blue)</option>
               <option value="important">📕 Important (Red)</option>
@@ -73,25 +73,42 @@ export default function MessageTab() {
           </div>
         </div>
 
-        <div>
+        <div className="flex-1 flex flex-col min-w-0 w-full">
           <label className="block text-sm font-bold text-slate-700 mb-2">Message Content</label>
-          {/* REMOVED overflow-hidden so dropdowns work, and added focus ring */}
-          <div className="bg-white rounded-xl border-2 border-slate-200 focus-within:border-indigo-500 transition-colors">
+          <div className="bg-white rounded-xl border-2 border-slate-200 focus-within:border-indigo-500 transition-colors flex-1 w-full min-w-0">
+            {/* 
+              Aggressive CSS overrides to completely disable Quill's fixed heights, 
+              force flexbox wrapping, and strictly break long words/URLs.
+            */}
             <ReactQuill 
               theme="snow" 
               value={formData.content} 
               onChange={(content) => setFormData({ ...formData, content })}
-              {/* REPLACED fixed h-48 with a dynamic min-height so it expands as you type */}
-              className="border-none [&_.ql-editor]:min-h-[200px]"
+              className="
+                flex flex-col w-full
+                [&_.ql-container]:!border-none 
+                [&_.ql-container]:!h-auto 
+                [&_.ql-editor]:!min-h-[200px] 
+                [&_.ql-editor]:!h-auto 
+                [&_.ql-editor]:!max-w-full
+                [&_.ql-editor]:!break-words 
+                [&_.ql-editor]:!whitespace-pre-wrap 
+                [&_.ql-editor]:overflow-x-hidden
+                [&_.ql-toolbar]:!border-none 
+                [&_.ql-toolbar]:!border-b 
+                [&_.ql-toolbar]:!border-slate-100
+                [&_.ql-toolbar]:!flex
+                [&_.ql-toolbar]:!flex-wrap
+              "
             />
           </div>
         </div>
 
-        <div className="pt-10">
+        <div className="pt-6">
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"
+            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <Save className="w-5 h-5" /> {isSaving ? 'Saving to Database...' : 'Save & Publish Message'}
           </button>

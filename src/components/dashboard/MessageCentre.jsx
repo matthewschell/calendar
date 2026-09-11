@@ -45,7 +45,7 @@ export default function MessageCentre() {
   };
 
   return (
-    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col`}>
+    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col w-full min-w-0`}>
       
       <div 
         className="flex items-start justify-between mb-2 shrink-0 cursor-default select-none" 
@@ -61,11 +61,13 @@ export default function MessageCentre() {
         </div>
       </div>
       
-      {/* The [&_*]:!break-words and !whitespace-normal forcefully strips away 
-        bad formatting pasted from external websites or Word docs! 
+      {/* 
+        The w-full and min-w-0 prevents flexbox blowout from long words.
+        [&_*]:!break-words ensures long URLs wrap safely.
+        [&_*]:!whitespace-pre-wrap ensures Quill's intentional line breaks are preserved.
       */}
       <div 
-        className={`${activeTheme.text} text-sm leading-relaxed flex-1 [&_*]:!whitespace-normal [&_*]:!break-words [&_img]:!max-w-full [&_img]:!h-auto [&_img]:!rounded-lg [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-1`}
+        className={`${activeTheme.text} text-sm leading-relaxed flex-1 w-full min-w-0 [&_*]:!break-words [&_*]:!whitespace-pre-wrap [&_img]:!max-w-full [&_img]:!h-auto [&_img]:!rounded-lg [&>ul]:list-disc [&>ul]:ml-5 [&>ol]:list-decimal [&>ol]:ml-5 [&>p]:mb-1`}
         dangerouslySetInnerHTML={{ __html: messageData.content }} 
       />
     </div>
