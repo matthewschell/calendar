@@ -59,6 +59,7 @@ export default function MemberProfileModal({ member, onClose }) {
     return () => unsub();
   }, []);
 
+  // UPDATED: Listen to both 'completions' and 'history' collections
   useEffect(() => {
     if (!member) return;
     let startOfRange = new Date(referenceDate);
@@ -76,8 +77,13 @@ export default function MemberProfileModal({ member, onClose }) {
     startOfRange.setHours(0, 0, 0, 0);
     endOfRange.setHours(23, 59, 59, 999);
 
-    const q = query(collection(db, 'completions'), where('completedBy', '==', member.id));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const qComps = query(collection(db, 'completions'), where('completedBy', '==', member.id));
+    const qHist = query(collection(db, 'history'), where('completedBy', '==', member.id));
+    
+    let compsData = [];
+    let histData = [];
+
+    const calculateHistory = () => {
       let currentRangePts = 0;
       const dailyMap = {};
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -91,8 +97,9 @@ export default function MemberProfileModal({ member, onClose }) {
         dailyMap[d.toDateString()] = { dayLabel, pts: 0, isPayDay, dateObj: d };
       }
 
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
+      const allData = [...compsData, ...histData];
+      
+      allData.forEach(data => {
         const date = data.timestamp?.toDate();
         if (!date) return;
         if (date >= startOfRange && date <= endOfRange) {
@@ -104,9 +111,22 @@ export default function MemberProfileModal({ member, onClose }) {
 
       setHistoryData(Object.values(dailyMap).sort((a, b) => a.dateObj - b.dateObj));
       setTimeframePoints(currentRangePts);
+    };
+
+    const unsubComps = onSnapshot(qComps, (snapshot) => {
+      compsData = snapshot.docs.map(d => d.data());
+      calculateHistory();
     });
 
-    return () => unsub();
+    const unsubHist = onSnapshot(qHist, (snapshot) => {
+      histData = snapshot.docs.map(d => d.data());
+      calculateHistory();
+    });
+
+    return () => {
+      unsubComps();
+      unsubHist();
+    };
   }, [member?.id, referenceDate, historyTimeframe, allowanceConfig.payDay]);
 
   if (!member) return null;
@@ -437,9 +457,7 @@ export default function MemberProfileModal({ member, onClose }) {
                               <select value={celebForm.soundUrl || ''} onChange={e => { const val = { ...celebForm, soundUrl: e.target.value }; setCelebForm(val); handleUpdateSetting('customCelebration', val); }} className="w-full p-2.5 rounded-lg border border-slate-200 focus:border-indigo-500 font-bold text-sm text-slate-700 bg-slate-50 focus:bg-white transition-colors cursor-pointer">
                                 <option value="">No Sound (Silent)</option>
                                 {celebSoundOptions.map((s, idx) => <option key={idx} value={s.url}>{s.name}</option>)}
-                                {celebForm.soundUrl && !celebSoundOptions.find(s => s.url === celebForm.soundUrl) && (
-                                  <option value={celebForm.soundUrl}>🎙️ Custom Uploaded Audio</option>
-                                )}
+                                {celebForm.soundUrl && !celebSoundOptions.find(s => s.url === celebForm.soundUrl) && <option value={celebForm.soundUrl}>🎙️ Custom Uploaded Audio</option>}
                               </select>
                             </div>
                             

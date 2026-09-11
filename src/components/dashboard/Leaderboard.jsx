@@ -20,7 +20,6 @@ export default function Leaderboard() {
   const [timeframe, setTimeframe] = useState('daily');
   const [revertCountdown, setRevertCountdown] = useState(null);
   
-  // FIX: Track the ID instead of the whole object so it stays live
   const [selectedMemberId, setSelectedMemberId] = useState(null);
 
   const todayStr = useMidnightTick();
@@ -57,11 +56,6 @@ export default function Leaderboard() {
   }, [timeframe, widgetConfig.defaultTimeframe, widgetConfig.autoRevertSeconds]);
 
   useEffect(() => {
-    if (timeframe === 'lifetime') {
-      setScoresLoading(false);
-      return;
-    }
-
     setScoresLoading(true);
     const now = new Date();
     let startDate = new Date();
@@ -82,27 +76,59 @@ export default function Leaderboard() {
     } else if (timeframe === 'yearly') {
       startDate = new Date(now.getFullYear(), 0, 1);
       endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (timeframe === 'lifetime') {
+      startDate = new Date(2020, 0, 1);
+      endDate = new Date(2099, 11, 31, 23, 59, 59, 999);
     }
 
-    const q = query(
+    // Query BOTH active completions and archived history
+    const qComps = query(
       collection(db, 'completions'), 
       where('timestamp', '>=', startDate),
       where('timestamp', '<=', endDate)
     );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+
+    const qHist = query(
+      collection(db, 'history'), 
+      where('timestamp', '>=', startDate),
+      where('timestamp', '<=', endDate)
+    );
+
+    let compsData = [];
+    let histData = [];
+    let compsLoaded = false;
+    let histLoaded = false;
+
+    const calculateScores = () => {
       const calculatedScores = {};
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      const allData = [...compsData, ...histData];
+      
+      allData.forEach(data => {
         const kidId = data.completedBy;
         const points = Number(data.points) || 0;
         if (kidId) calculatedScores[kidId] = (calculatedScores[kidId] || 0) + points;
       });
+      
       setScores(calculatedScores);
-      setScoresLoading(false);
+      if (compsLoaded && histLoaded) setScoresLoading(false);
+    };
+
+    const unsubComps = onSnapshot(qComps, (snapshot) => {
+      compsData = snapshot.docs.map(d => d.data());
+      compsLoaded = true;
+      calculateScores();
     });
 
-    return () => unsubscribe();
+    const unsubHist = onSnapshot(qHist, (snapshot) => {
+      histData = snapshot.docs.map(d => d.data());
+      histLoaded = true;
+      calculateScores();
+    });
+
+    return () => {
+      unsubComps();
+      unsubHist();
+    };
   }, [timeframe, todayStr]); 
 
   if (membersLoading) return null;
@@ -111,17 +137,15 @@ export default function Leaderboard() {
     .filter(m => m.participatesInChores === true || String(m.participatesInChores).toLowerCase() === 'true')
     .map(kid => ({
       ...kid,
-      displayPoints: timeframe === 'lifetime' ? (Number(kid.points) || 0) : (scores[kid.id] || 0)
+      displayPoints: scores[kid.id] || 0
     }))
     .sort((a, b) => b.displayPoints - a.displayPoints);
 
   const isDefaultView = timeframe === widgetConfig.defaultTimeframe;
   
-  // Grab the live member object for the modal
   const liveSelectedMember = selectedMemberId ? kids.find(k => k.id === selectedMemberId) : null;
 
   return (
-    // ADDED shrink-0 to prevent flexbox from crushing this widget
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[100px] shrink-0">
       <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
       
