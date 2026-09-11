@@ -5,12 +5,11 @@ import { MessageSquare, Save, Power, SmilePlus } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
 
 const FUN_EMOJIS = [
-  '😀','😂','🥰','😎','🥳','🤩','🤡','👻','👽','🤖',
+  '😀','😂','🥰','😎','🥳','🤩','🖖','🤡','👻','👽','🤖',
   '🦄','🐾','🦋','🦖','🐙','🦈','🍕','🍔','🍟','🍦',
   '🍩','🧁','⚽','🏀','🎮','🎸','🚀','🏎️','🚁','✨',
   '🔥','🎉','🎈','⭐','❤️','💩','👑','💎','💰','🏆',
-  '💯','⚠️','✅','❌','🛑','💡','📣','📅','⏰','🏆'
-];
+  '💯','⚠️','✅','❌','🛑','💡','📣','📅','⏰','🏆','🏫'];
 
 export default function MessageTab() {
   const { messageData, loading, saveMessage } = useMessageCentre();
