@@ -1,13 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { MessageSquare, Save, Power } from 'lucide-react';
+import { MessageSquare, Save, Power, SmilePlus } from 'lucide-react';
 import { useMessageCentre } from '../../hooks/useMessageCentre';
+
+const FUN_EMOJIS = [
+  '😀','😂','🥰','😎','🥳','🤩','🤡','👻','👽','🤖',
+  '🦄','🐾','🦋','🦖','🐙','🦈','🍕','🍔','🍟','🍦',
+  '🍩','🧁','⚽','🏀','🎮','🎸','🚀','🏎️','🚁','✨',
+  '🔥','🎉','🎈','⭐','❤️','💩','👑','💎','💰','🏆',
+  '💯','⚠️','✅','❌','🛑','💡','📣','📅','⏰','🏆'
+];
 
 export default function MessageTab() {
   const { messageData, loading, saveMessage } = useMessageCentre();
   const [formData, setFormData] = useState(messageData);
   const [isSaving, setIsSaving] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  
+  // Reference to the Quill editor so we can inject text at the cursor
+  const quillRef = useRef(null);
 
   useEffect(() => {
     setFormData(messageData);
@@ -19,6 +31,23 @@ export default function MessageTab() {
     setIsSaving(true);
     await saveMessage(formData);
     setIsSaving(false);
+  };
+
+  const insertEmoji = (emoji) => {
+    if (!quillRef.current) return;
+    
+    // Get the Quill editor instance
+    const editor = quillRef.current.getEditor();
+    
+    // Find where the user's cursor currently is (or default to the end of the document)
+    const range = editor.getSelection();
+    const cursorPosition = range ? range.index : editor.getLength();
+    
+    // Inject the emoji
+    editor.insertText(cursorPosition, emoji);
+    
+    // Move the cursor to right after the inserted emoji
+    editor.setSelection(cursorPosition + emoji.length);
   };
 
   return (
@@ -73,14 +102,43 @@ export default function MessageTab() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0 w-full">
-          <label className="block text-sm font-bold text-slate-700 mb-2">Message Content</label>
+        <div className="flex-1 flex flex-col min-w-0 w-full relative">
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-bold text-slate-700">Message Content</label>
+            <button 
+              onClick={() => setShowEmojis(!showEmojis)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${showEmojis ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              <SmilePlus className="w-4 h-4" /> Insert Emoji
+            </button>
+          </div>
+
+          {/* EMOJI TRAY OVERLAY */}
+          {showEmojis && (
+            <div className="absolute top-8 right-0 z-20 bg-white border border-slate-200 shadow-xl rounded-xl p-2 w-64 animate-in fade-in zoom-in-95 duration-200">
+              <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                {FUN_EMOJIS.map(emo => (
+                  <button 
+                    key={emo}
+                    type="button"
+                    onClick={() => insertEmoji(emo)}
+                    className="hover:bg-slate-100 hover:shadow-sm rounded p-1 text-xl transition-all cursor-pointer flex items-center justify-center"
+                    title="Insert Emoji"
+                  >
+                    {emo}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border-2 border-slate-200 focus-within:border-indigo-500 transition-colors flex-1 w-full min-w-0">
             {/* 
               Aggressive CSS overrides to completely disable Quill's fixed heights, 
               force flexbox wrapping, and strictly break long words/URLs.
             */}
             <ReactQuill 
+              ref={quillRef}
               theme="snow" 
               value={formData.content} 
               onChange={(content) => setFormData({ ...formData, content })}
