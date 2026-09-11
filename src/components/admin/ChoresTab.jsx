@@ -1,4 +1,3 @@
-// src/components/admin/ChoresTab.jsx
 import { useState, useEffect } from 'react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { Plus, Trash2, Edit2, Save, CalendarDays, CheckSquare, X, Calculator, Settings } from 'lucide-react';
@@ -17,14 +16,14 @@ export default function ChoresTab() {
   const [newChore, setNewChore] = useState({ name: '', points: 10, frequency: 'daily', assignedTo: 'unassigned', days: [], startDate: '' });
   const [editingChore, setEditingChore] = useState(null);
 
-  // Allowance Settings State
-  const [allowanceConfig, setAllowanceConfig] = useState({ payDay: 5 }); // Default to Friday
+  // Allowance Settings State (Added dailyBonus default)
+  const [allowanceConfig, setAllowanceConfig] = useState({ payDay: 5, dailyBonus: 20 }); 
   const [saving, setSaving] = useState(false);
 
   // Fetch Allowance Config
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'allowance'), (docSnap) => {
-      if (docSnap.exists()) setAllowanceConfig(docSnap.data());
+      if (docSnap.exists()) setAllowanceConfig({ payDay: 5, dailyBonus: 20, ...docSnap.data() });
     });
     return () => unsub();
   }, []);
@@ -37,7 +36,7 @@ export default function ChoresTab() {
       setNewChore(parsedDraft);
       setIsAdding(true);
       setActiveTab('manage');
-      sessionStorage.removeItem('draftChore'); // Delete it so it doesn't stay open forever
+      sessionStorage.removeItem('draftChore'); 
     }
   }, []);
 
@@ -143,51 +142,39 @@ export default function ChoresTab() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-10">
       
-      {/* Navigation Tabs */}
       <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6 border border-slate-200 shadow-inner overflow-x-auto">
-        <button 
-          onClick={() => setActiveTab('manage')} 
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'manage' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-        >
+        <button onClick={() => setActiveTab('manage')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'manage' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
           <CheckSquare className="w-4 h-4" /> Manage Chores
         </button>
-        <button 
-          onClick={() => setActiveTab('forecast')} 
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'forecast' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-        >
+        <button onClick={() => setActiveTab('forecast')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'forecast' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
           <Calculator className="w-4 h-4" /> Forecaster Matrix
         </button>
-        <button 
-          onClick={() => setActiveTab('settings')} 
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-        >
+        <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
           <Settings className="w-4 h-4" /> Allowance Settings
         </button>
       </div>
 
-      {/* Tab Content: Forecast */}
       {activeTab === 'forecast' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <ChoreForecaster />
         </div>
       )}
 
-      {/* Tab Content: Settings */}
       {activeTab === 'settings' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-2 mb-4">
-            <CalendarDays className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-bold text-slate-800 text-lg">Weekly Allowance Target</h3>
+            <Settings className="w-5 h-5 text-indigo-500" />
+            <h3 className="font-bold text-slate-800 text-lg">Allowance & Points Settings</h3>
           </div>
-          <p className="text-sm text-slate-500 mb-6">Select the day of the week your family distributes allowance. This helps the kid dashboards highlight when pay day is arriving.</p>
+          <p className="text-sm text-slate-500 mb-6">Configure how and when the family earns their points.</p>
           
-          <div className="flex items-end gap-4 max-w-md">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mb-8">
+            <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Weekly Pay Day</label>
               <select 
                 value={allowanceConfig.payDay} 
                 onChange={(e) => setAllowanceConfig({ ...allowanceConfig, payDay: Number(e.target.value) })}
-                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
                 <option value={0}>Sunday</option>
                 <option value={1}>Monday</option>
@@ -197,11 +184,30 @@ export default function ChoresTab() {
                 <option value={5}>Friday</option>
                 <option value={6}>Saturday</option>
               </select>
+              <p className="text-xs text-slate-400 mt-2">The day allowance is distributed on the kid dashboards.</p>
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Daily Completion Bonus</label>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number"
+                  min="0"
+                  value={allowanceConfig.dailyBonus}
+                  onChange={(e) => setAllowanceConfig({ ...allowanceConfig, dailyBonus: Number(e.target.value) })}
+                  className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-500 font-bold">Points</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">Awarded automatically when a kid finishes all assigned chores.</p>
+            </div>
+          </div>
+          
+          <div className="pt-6 border-t border-slate-100 flex justify-end">
             <button 
               onClick={handleSaveConfig}
               disabled={saving}
-              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 h-[50px] shadow-sm"
+              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Config'}
             </button>
@@ -209,7 +215,6 @@ export default function ChoresTab() {
         </div>
       )}
 
-      {/* Tab Content: Manage */}
       {activeTab === 'manage' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex justify-between items-center mb-6">
@@ -282,7 +287,6 @@ export default function ChoresTab() {
             </div>
           )}
 
-          {/* Group Chores by Kid */}
           <div className="space-y-4">
             {[...kids, { id: 'unassigned', name: '⭐ Bonus Chores', color: '#f59e0b' }].map(assignee => {
               const assigneeChores = activeChores.filter(c => c.assignedTo === assignee.id || (!c.assignedTo && assignee.id === 'unassigned')).sort((a, b) => a.name.localeCompare(b.name));
@@ -326,9 +330,8 @@ export default function ChoresTab() {
         </div>
       )}
 
-      {/* Editing Modal */}
       {editingChore && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-[1100]" onClick={() => setEditingChore(null)}>
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 1100 }} onClick={() => setEditingChore(null)}>
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800">Edit Chore</h3>

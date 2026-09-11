@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Circle, Plus, X } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useChores } from '../../hooks/useChores';
 import { useFamilyMembers } from '../../hooks/useFamilyMembers';
@@ -28,6 +28,15 @@ export default function ChoresPanel() {
   const [pinInput, setPinInput] = useState('');
   const [quickAddForm, setQuickAddForm] = useState({ name: '', points: 10, assignedTo: 'unassigned' });
 
+  // Load Allowance Config for the Daily Bonus value
+  const [allowanceConfig, setAllowanceConfig] = useState({ dailyBonus: 20 });
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'allowance'), (docSnap) => {
+      if (docSnap.exists()) setAllowanceConfig({ dailyBonus: 20, ...docSnap.data() });
+    });
+    return () => unsub();
+  }, []);
+
   // Refs for tracking rapid taps
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
@@ -49,13 +58,10 @@ export default function ChoresPanel() {
   };
 
   // Intelligent Background Caching
-  // Only downloads files that are actively assigned to kids or the global celebration
   useEffect(() => {
-    // 1. Cache Global Celebration
     if (globalCeleb?.type === 'video' && globalCeleb?.videoUrl) preloadMedia(globalCeleb.videoUrl);
     if (globalCeleb?.type === 'particles' && globalCeleb?.soundUrl) preloadMedia(globalCeleb.soundUrl);
 
-    // 2. Cache Kid Specific Sounds & Celebrations
     members.forEach(m => {
       if (m.signatureSound) preloadMedia(m.signatureSound);
       if (m.customCelebration?.enabled) {
@@ -107,6 +113,8 @@ export default function ChoresPanel() {
 
   const handleChoreClick = (chore) => {
     const isDone = Boolean(completions[chore.id]);
+    
+    // Claiming unassigned / bonus chores
     if (!isDone && (chore.assignedTo === 'unassigned' || !chore.assignedTo)) {
       setClaimingChore(chore);
       return;
@@ -116,26 +124,49 @@ export default function ChoresPanel() {
       if (claimerId) toggleCompletion(chore, claimerId, true);
       return;
     }
-    toggleCompletion(chore, chore.assignedTo, isDone);
 
-    if (!isDone && chore.assignedTo) {
-      const member = members.find(m => m.id === chore.assignedTo);
+    const kidId = chore.assignedTo;
+    
+    // Toggle the actual chore
+    toggleCompletion(chore, kidId, isDone);
+
+    if (!isDone && kidId) {
+      // 1. We are COMPLETING the chore
+      const member = members.find(m => m.id === kidId);
       
       if (!isMuted && member?.signatureSound) {
         playAudio(member.signatureSound);
       }
       
-      const kidChores = assignedChores.filter(c => c.assignedTo === chore.assignedTo);
+      const kidChores = assignedChores.filter(c => c.assignedTo === kidId);
       const allDone = kidChores.every(c => c.id === chore.id ? true : completions[c.id]);
       
       if (allDone && kidChores.length > 0) {
+        const bonusAmount = allowanceConfig.dailyBonus !== undefined ? Number(allowanceConfig.dailyBonus) : 20;
+        
+        // Award completion bonus if applicable!
+        if (bonusAmount > 0 && !completions[`bonus-${kidId}`]) {
+          toggleCompletion({ id: `bonus-${kidId}`, points: bonusAmount }, kidId, false);
+        }
+
         const celebConfig = member?.customCelebration?.enabled ? member.customCelebration : null;
         triggerCelebration(celebConfig);
         
         if (member) {
-          setCelebratingKid({ ...member, points: Number(member.points || 0) + Number(chore.points || 0) });
+          setCelebratingKid({ 
+            ...member, 
+            points: Number(member.points || 0) + Number(chore.points || 0) + bonusAmount 
+          });
           setTimeout(() => setCelebratingKid(null), 15000);
         }
+      }
+    } else if (isDone && kidId) {
+      // 2. We are UNCHECKING the chore
+      const bonusAmount = allowanceConfig.dailyBonus !== undefined ? Number(allowanceConfig.dailyBonus) : 20;
+      
+      // If the completion bonus was previously awarded today, revoke it
+      if (completions[`bonus-${kidId}`]) {
+        toggleCompletion({ id: `bonus-${kidId}`, points: bonusAmount }, kidId, true);
       }
     }
   };
@@ -327,7 +358,14 @@ export default function ChoresPanel() {
             </div>
             <div className="text-2xl font-black text-amber-400 uppercase tracking-widest mb-2 drop-shadow-md">Mission Complete!</div>
             <div className="text-5xl font-black text-white mb-2 tracking-tight" style={{ textShadow: `0 0 30px ${celebratingKid.color || '#cbd5e1'}` }}>{celebratingKid.name}</div>
-            <div className="text-xl text-emerald-200 mb-8 font-medium">All chores done for today! 🎉</div>
+            
+            {/* Show dynamic text if bonus is enabled */}
+            <div className="text-xl text-emerald-200 mb-8 font-medium">
+              {allowanceConfig.dailyBonus > 0 
+                ? `All chores done! +${allowanceConfig.dailyBonus} pt Bonus! 🎉` 
+                : 'All chores done for today! 🎉'}
+            </div>
+            
             <div className="inline-block text-white px-8 py-3 rounded-full text-2xl font-black shadow-xl border-2 border-white/20" style={{ backgroundColor: celebratingKid.color || '#64748b', boxShadow: `0 0 20px ${celebratingKid.color}88` }}>{celebratingKid.points || 0} ⭐ Total</div>
             <div className="mt-8 text-sm text-slate-300 font-medium opacity-70 tracking-widest uppercase">tap anywhere to dismiss</div>
           </div>
