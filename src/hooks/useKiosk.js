@@ -1,3 +1,4 @@
+// src/hooks/useKiosk.js
 import { useState, useEffect, useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -9,7 +10,8 @@ export function useKiosk() {
     dimIntensity: 0.85,
     quietTimeEnabled: false,
     quietTimeStart: '20:00',
-    quietTimeEnd: '07:00'
+    quietTimeEnd: '07:00',
+    wakeTimeout: 60 // Default 60 seconds
   });
   
   const [isQuietTime, setIsQuietTime] = useState(false);
@@ -18,6 +20,16 @@ export function useKiosk() {
   const [isKioskDevice, setIsKioskDevice] = useState(() => localStorage.getItem('isKioskDevice') === 'true');
 
   const wakeTimerRef = useRef(null);
+  const lastActivityRef = useRef(0);
+
+  // Sync Kiosk Role changes instantly across all components without needing a refresh
+  useEffect(() => {
+    const handleKioskChange = () => {
+      setIsKioskDevice(localStorage.getItem('isKioskDevice') === 'true');
+    };
+    window.addEventListener('kioskModeChanged', handleKioskChange);
+    return () => window.removeEventListener('kioskModeChanged', handleKioskChange);
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'kiosk'), (docSnap) => {
@@ -66,11 +78,18 @@ export function useKiosk() {
     if (!isKioskDevice) return; 
 
     const handleActivity = () => {
+      const now = Date.now();
+      // Throttle activity checks to max 1 per second to prevent overloading CPU on mousemove
+      if (now - lastActivityRef.current < 1000) return; 
+      lastActivityRef.current = now;
+
       setIsTemporarilyAwake(true);
       if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      
+      const timeoutLength = (config.wakeTimeout || 60) * 1000;
       wakeTimerRef.current = setTimeout(() => {
         setIsTemporarilyAwake(false);
-      }, 60000); 
+      }, timeoutLength); 
     };
 
     window.addEventListener('click', handleActivity);
@@ -83,11 +102,12 @@ export function useKiosk() {
       window.removeEventListener('mousemove', handleActivity);
       if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
     };
-  }, [isKioskDevice]);
+  }, [isKioskDevice, config.wakeTimeout]);
 
   const toggleKioskMode = (enabled) => {
     localStorage.setItem('isKioskDevice', enabled);
     setIsKioskDevice(enabled);
+    window.dispatchEvent(new Event('kioskModeChanged')); // Notify app globally
   };
 
   const isBaseDimmed = config.manualDim || isQuietTime;
