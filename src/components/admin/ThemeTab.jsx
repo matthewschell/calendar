@@ -405,71 +405,76 @@ export default function ThemeTab() {
 
                 <div className="space-y-3">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Effect Layers ({celebForm.layers?.length || 0}/4)</label>
-                  {(celebForm.layers || []).map((layer, index) => (
-                    <div key={index} className="bg-white border border-slate-200 rounded-xl p-3 relative shadow-sm">
-                      <button onClick={() => removeLayer(index)} className="absolute top-2 right-2 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
-                      <div className="space-y-3 pr-6">
-                        <div>
-                          <select value={layer.type} onChange={(e) => updateLayer(index, 'type', e.target.value)} className="w-full p-2 rounded-lg border border-slate-200 font-bold text-sm text-slate-700 focus:border-indigo-500 cursor-pointer">
-                            {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
-                          </select>
-                        </div>
-                        
-                        {/* ROBUST EMOJI PICKER IMPLEMENTATION */}
-                        {layer.type === 'emoji' ? (
+                  {(celebForm.layers || []).map((layer, index) => {
+                    // Backwards compatible Emoji UI State
+                    const currentEmojis = layer.emojis || (layer.emojiChar ? [layer.emojiChar] : ['😀']);
+
+                    return (
+                      <div key={index} className="bg-white border border-slate-200 rounded-xl p-3 relative shadow-sm">
+                        <button onClick={() => removeLayer(index)} className="absolute top-2 right-2 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
+                        <div className="space-y-3 pr-6">
                           <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Select Emojis (Max 3)</label>
-                              <span className="text-[9px] text-slate-400">{(layer.emojis || []).length}/3</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px] bg-slate-50 border border-slate-200 rounded-lg p-1.5">
-                              {(layer.emojis || []).map((emo, i) => (
-                                <span key={i} className="bg-white border border-slate-200 shadow-sm text-sm px-2 py-0.5 rounded-md flex items-center gap-1">
-                                  {emo} 
-                                  <button type="button" onClick={() => {
-                                    const newEmojis = (layer.emojis || []).filter((_, idx) => idx !== i);
-                                    updateLayer(index, 'emojis', newEmojis);
-                                  }} className="text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"><X className="w-3 h-3"/></button>
-                                </span>
-                              ))}
-                              {(layer.emojis || []).length === 0 && <span className="text-xs text-slate-400 italic py-0.5 px-1">None selected</span>}
-                            </div>
-                            
-                            <div className="grid grid-cols-8 sm:grid-cols-10 gap-1 h-32 overflow-y-auto custom-scrollbar p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-                              {POPULAR_EMOJIS.map(emo => (
-                                <button 
-                                  key={emo}
-                                  type="button"
-                                  onClick={() => {
-                                    const current = layer.emojis || [];
-                                    if (current.length < 3 && !current.includes(emo)) {
-                                      updateLayer(index, 'emojis', [...current, emo]);
-                                    }
-                                  }}
-                                  className="hover:bg-white hover:shadow-sm rounded p-1 text-xl transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
-                                >
-                                  {emo}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <select value={JSON.stringify(layer.colors || CELEB_PALETTES[0].colors)} onChange={(e) => updateLayer(index, 'colors', JSON.parse(e.target.value))} className="w-full p-2 rounded-lg border border-slate-200 font-bold text-sm text-slate-700 focus:border-indigo-500 cursor-pointer mb-1.5">
-                              {CELEB_PALETTES.map(pal => <option key={pal.id} value={JSON.stringify(pal.colors)}>{pal.label}</option>)}
+                            <select value={layer.type} onChange={(e) => updateLayer(index, 'type', e.target.value)} className="w-full p-2 rounded-lg border border-slate-200 font-bold text-sm text-slate-700 focus:border-indigo-500 cursor-pointer">
+                              {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
                             </select>
-                            <div className="flex h-1.5 rounded overflow-hidden">
-                              {(layer.colors || CELEB_PALETTES[0].colors).map((c, i) => <div key={i} style={{ backgroundColor: c, flex: 1 }} />)}
-                            </div>
                           </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                          <div><div className="flex justify-between"><label className="text-[10px] font-bold text-slate-500">Size</label><span className="text-[10px] text-indigo-500">{layer.scale}x</span></div><input type="range" min="0.5" max="3" step="0.1" value={layer.scale} onChange={(e) => updateLayer(index, 'scale', parseFloat(e.target.value))} className="w-full accent-indigo-500"/></div>
-                          <div><div className="flex justify-between"><label className="text-[10px] font-bold text-slate-500">Amount</label><span className="text-[10px] text-indigo-500">{layer.intensity * 100}%</span></div><input type="range" min="0.2" max="2.5" step="0.1" value={layer.intensity} onChange={(e) => updateLayer(index, 'intensity', parseFloat(e.target.value))} className="w-full accent-indigo-500"/></div>
+                          
+                          {/* ROBUST EMOJI PICKER IMPLEMENTATION */}
+                          {layer.type === 'emoji' ? (
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase">Select Emojis (Max 3)</label>
+                                <span className="text-[9px] text-slate-400">{currentEmojis.length}/3</span>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px] bg-slate-50 border border-slate-200 rounded-lg p-1.5">
+                                {currentEmojis.map((emo, i) => (
+                                  <span key={i} className="bg-white border border-slate-200 shadow-sm text-sm px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    {emo} 
+                                    <button type="button" onClick={() => {
+                                      const newEmojis = currentEmojis.filter((_, idx) => idx !== i);
+                                      updateLayer(index, 'emojis', newEmojis);
+                                    }} className="text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"><X className="w-3 h-3"/></button>
+                                  </span>
+                                ))}
+                                {currentEmojis.length === 0 && <span className="text-xs text-slate-400 italic py-0.5 px-1">None selected</span>}
+                              </div>
+                              
+                              <div className="grid grid-cols-8 sm:grid-cols-10 gap-1 h-32 overflow-y-auto custom-scrollbar p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                {POPULAR_EMOJIS.map(emo => (
+                                  <button 
+                                    key={emo}
+                                    type="button"
+                                    onClick={() => {
+                                      if (currentEmojis.length < 3 && !currentEmojis.includes(emo)) {
+                                        updateLayer(index, 'emojis', [...currentEmojis, emo]);
+                                      }
+                                    }}
+                                    className="hover:bg-white hover:shadow-sm rounded p-1 text-xl transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
+                                  >
+                                    {emo}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <select value={JSON.stringify(layer.colors || CELEB_PALETTES[0].colors)} onChange={(e) => updateLayer(index, 'colors', JSON.parse(e.target.value))} className="w-full p-2 rounded-lg border border-slate-200 font-bold text-sm text-slate-700 focus:border-indigo-500 cursor-pointer mb-1.5">
+                                {CELEB_PALETTES.map(pal => <option key={pal.id} value={JSON.stringify(pal.colors)}>{pal.label}</option>)}
+                              </select>
+                              <div className="flex h-1.5 rounded overflow-hidden">
+                                {(layer.colors || CELEB_PALETTES[0].colors).map((c, i) => <div key={i} style={{ backgroundColor: c, flex: 1 }} />)}
+                              </div>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div><div className="flex justify-between"><label className="text-[10px] font-bold text-slate-500">Size</label><span className="text-[10px] text-indigo-500">{layer.scale}x</span></div><input type="range" min="0.5" max="3" step="0.1" value={layer.scale} onChange={(e) => updateLayer(index, 'scale', parseFloat(e.target.value))} className="w-full accent-indigo-500"/></div>
+                            <div><div className="flex justify-between"><label className="text-[10px] font-bold text-slate-500">Amount</label><span className="text-[10px] text-indigo-500">{layer.intensity * 100}%</span></div><input type="range" min="0.2" max="2.5" step="0.1" value={layer.intensity} onChange={(e) => updateLayer(index, 'intensity', parseFloat(e.target.value))} className="w-full accent-indigo-500"/></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {(celebForm.layers || []).length < 4 && <button onClick={addLayer} className="w-full py-3 border-2 border-dashed border-indigo-200 text-indigo-500 font-bold rounded-xl flex items-center justify-center gap-1 hover:bg-indigo-50 hover:border-indigo-400 transition-colors text-sm cursor-pointer"><Plus className="w-4 h-4" /> Add Layer</button>}
                 </div>
               </>

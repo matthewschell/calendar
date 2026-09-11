@@ -16,7 +16,8 @@ export default function FamilyMembersTab() {
   const [localSound, setLocalSound] = useState('');
   const [uploadingMemberAvatar, setUploadingMemberAvatar] = useState(false);
 
-  // We keep this state so the Add/Edit form can still display the library options to the user
+  // We keep these states to populate the dropdowns in the edit form, 
+  // but we no longer manage the libraries from this tab.
   const [avatarLibrary, setAvatarLibrary] = useState([]);
   const [soundLibrary, setSoundLibrary] = useState([]);
 
@@ -193,6 +194,7 @@ export default function FamilyMembersTab() {
     );
   }
 
+  // --- MAIN RENDER WITHOUT LIBRARY TABS ---
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-10">
       <div className="flex justify-between items-center mb-4">

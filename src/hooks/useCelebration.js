@@ -117,41 +117,28 @@ export function useCelebration() {
     activeLayers.forEach(layer => {
       const pCount = Math.max(1, Math.round(5 * layer.intensity)); 
       
-      // Build custom shapes for emojis if needed
+      // Parse custom emojis into canvas-confetti shapes
       const customShapes = [];
       if (layer.type === 'emoji') {
         const emojisToUse = (layer.emojis && layer.emojis.length > 0) 
           ? layer.emojis 
-          : (layer.emojiChar ? [layer.emojiChar] : ['😀']); // fallback for old configs
+          : (layer.emojiChar ? [layer.emojiChar] : ['😀']); // Fallback for old configurations
         
         emojisToUse.forEach(emo => {
-          try {
-            // Using a higher scalar here ensures the emoji bitmap is high resolution
+          if (typeof confetti.shapeFromText === 'function') {
             customShapes.push(confetti.shapeFromText({ text: emo, scalar: layer.scale * 2 }));
-          } catch (e) {
-            console.warn("Failed to create emoji shape:", e);
           }
         });
       }
 
-      // Safe wrapper for launch to apply base styles dynamically
       const launchConfetti = (opts) => {
-        const confettiOpts = {
+        confetti({
           ...opts,
-          zIndex: 100002,
-          scalar: layer.scale
-        };
-
-        if (layer.type === 'emoji' && customShapes.length > 0) {
-          confettiOpts.shapes = customShapes;
-          // CRITICAL: We do NOT pass the 'colors' array for emojis. 
-          // If you do, canvas-confetti tints them into solid silhouettes!
-        } else {
-          confettiOpts.colors = layer.colors;
-          confettiOpts.shapes = layer.type === 'fireworks' ? ['star'] : ['square', 'circle'];
-        }
-
-        confetti(confettiOpts);
+          colors: layer.colors,
+          scalar: layer.type === 'emoji' ? 1 : layer.scale, // Emoji scales via shapeFromText
+          shapes: layer.type === 'emoji' ? customShapes : (layer.type === 'fireworks' ? ['star'] : ['square', 'circle']),
+          zIndex: 100002
+        });
       };
 
       if (layer.type === 'cannons' || layer.type === 'emoji') {
