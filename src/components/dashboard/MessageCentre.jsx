@@ -10,7 +10,7 @@ export default function MessageCentre() {
   const tapTimerRef = useRef(null);
 
   if (loading) {
-    return <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg h-24 animate-pulse"></div>;
+    return <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg h-24 animate-pulse shrink-0"></div>;
   }
 
   // If inactive or completely empty, don't show
@@ -45,7 +45,8 @@ export default function MessageCentre() {
   };
 
   return (
-    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col w-full min-w-0`}>
+    // ADDED shrink-0 so flexbox stops squishing the pink box vertically
+    <div className={`${activeTheme.bg} border-2 ${activeTheme.border} rounded-2xl p-5 shadow-md relative overflow-hidden transition-colors min-h-24 flex flex-col w-full min-w-0 shrink-0`}>
       
       <div 
         className="flex items-start justify-between mb-2 shrink-0 cursor-default select-none" 

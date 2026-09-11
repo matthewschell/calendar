@@ -113,7 +113,8 @@ export default function DailyContent() {
 
   if (weatherLoading || contentLoading || !weatherConfig) {
     return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex gap-4 min-h-24 animate-pulse">
+      // ADDED shrink-0 to loading state
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg flex gap-4 min-h-24 animate-pulse shrink-0">
         <div className="flex-1 bg-slate-100 rounded-xl"></div>
         <div className="flex-1 bg-slate-100 rounded-xl"></div>
       </div>
@@ -171,9 +172,10 @@ export default function DailyContent() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // ADDED shrink-0 to outer container to protect it from Flexbox squishing
+    <div className="flex flex-col gap-4 shrink-0">
       {/* WEATHER WIDGET */}
-      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col">
+      <div className="bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl p-4 shadow-lg text-white relative overflow-hidden flex flex-col shrink-0">
         <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Header - City & 2 Toggles */}
@@ -365,7 +367,7 @@ export default function DailyContent() {
       </div>
 
       {/* FACT / JOKE / OVERRIDE CARD */}
-      <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 ${contentMeta.border}`}>
+      <div className={`bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-l-4 shrink-0 ${contentMeta.border}`}>
         <h3 className={`${contentMeta.text} font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2`}>
           {contentMeta.icon} {contentMeta.title}
         </h3>

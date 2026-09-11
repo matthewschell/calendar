@@ -121,7 +121,8 @@ export default function Leaderboard() {
   const liveSelectedMember = selectedMemberId ? kids.find(k => k.id === selectedMemberId) : null;
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-100 shrink-0">
+    // ADDED shrink-0 to prevent flexbox from crushing this widget
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col min-h-[100px] shrink-0">
       <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
       
       <div className="flex flex-col mb-4 relative z-10 shrink-0 items-center text-center">
