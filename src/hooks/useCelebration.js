@@ -117,26 +117,41 @@ export function useCelebration() {
     activeLayers.forEach(layer => {
       const pCount = Math.max(1, Math.round(5 * layer.intensity)); 
       
-      // Parse custom emojis into canvas-confetti shapes
+      // Build custom shapes for emojis if needed
       const customShapes = [];
       if (layer.type === 'emoji') {
         const emojisToUse = (layer.emojis && layer.emojis.length > 0) 
           ? layer.emojis 
-          : (layer.emojiChar ? [layer.emojiChar] : ['😀']); // Fallback for old configurations
+          : (layer.emojiChar ? [layer.emojiChar] : ['😀']); // fallback for old configs
         
         emojisToUse.forEach(emo => {
-          customShapes.push(confetti.shapeFromText({ text: emo, scalar: layer.scale * 2 }));
+          try {
+            // Using a higher scalar here ensures the emoji bitmap is high resolution
+            customShapes.push(confetti.shapeFromText({ text: emo, scalar: layer.scale * 2 }));
+          } catch (e) {
+            console.warn("Failed to create emoji shape:", e);
+          }
         });
       }
 
+      // Safe wrapper for launch to apply base styles dynamically
       const launchConfetti = (opts) => {
-        confetti({
+        const confettiOpts = {
           ...opts,
-          colors: layer.colors,
-          scalar: layer.type === 'emoji' ? 1 : layer.scale, // Emoji scales via shapeFromText
-          shapes: layer.type === 'emoji' ? customShapes : (layer.type === 'fireworks' ? ['star'] : ['square', 'circle']),
-          zIndex: 100002
-        });
+          zIndex: 100002,
+          scalar: layer.scale
+        };
+
+        if (layer.type === 'emoji' && customShapes.length > 0) {
+          confettiOpts.shapes = customShapes;
+          // CRITICAL: We do NOT pass the 'colors' array for emojis. 
+          // If you do, canvas-confetti tints them into solid silhouettes!
+        } else {
+          confettiOpts.colors = layer.colors;
+          confettiOpts.shapes = layer.type === 'fireworks' ? ['star'] : ['square', 'circle'];
+        }
+
+        confetti(confettiOpts);
       };
 
       if (layer.type === 'cannons' || layer.type === 'emoji') {

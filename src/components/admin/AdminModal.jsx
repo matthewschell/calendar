@@ -18,14 +18,12 @@ export default function AdminModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
-      // Check for a specific target tab routing request
       const targetTab = sessionStorage.getItem('targetAdminTab');
       if (targetTab) {
         setActiveTab(targetTab);
         sessionStorage.removeItem('targetAdminTab');
       }
 
-      // If bypassing the PIN entirely (from Quick Add Chore)
       if (sessionStorage.getItem('adminBypass') === 'true') {
         setIsAuthenticated(true);
         if (!targetTab) setActiveTab('chores'); 
