@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Save, Play, Plus, Trash2, Type, Palette, Wand2, X, Loader2, CheckCircle2, Image as ImageIcon, Video, Music } from 'lucide-react';
-import { doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
+import { Save, Play, Plus, Trash2, Type, Palette, Wand2, X, Loader2, CheckCircle2, Image as ImageIcon, Video, Music, PlayCircle } from 'lucide-react';
+import { doc, getDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useCelebration, EFFECTS, CELEB_PALETTES, DEFAULT_CELEBRATION } from '../../hooks/useCelebration';
 import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../../hooks/useTheme';
 import { compressImage } from '../../utils/imageCompression';
 import { uploadToCloudflare } from '../../utils/cloudflareUploader';
+import { playAudio } from '../../utils/audioPlayer';
 
 export default function ThemeTab() {
   const { settings: celebSettings, loading: celebLoading, saveSettings: saveCeleb, triggerCelebration } = useCelebration();
@@ -13,6 +14,12 @@ export default function ThemeTab() {
   
   const [activeTab, setActiveTab] = useState('theme');
   const [celebSoundOptions, setCelebSoundOptions] = useState([]);
+
+  // Library State for Avatars and Global Sounds
+  const [avatarLibrary, setAvatarLibrary] = useState([]);
+  const [soundLibrary, setSoundLibrary] = useState([]);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingLibrarySound, setUploadingLibrarySound] = useState(false);
 
   const [celebForm, setCelebForm] = useState(celebSettings || DEFAULT_CELEBRATION);
   const [themeForm, setThemeForm] = useState(theme);
@@ -30,7 +37,10 @@ export default function ThemeTab() {
 
   const [localOverride, setLocalOverride] = useState(() => localStorage.getItem('bgPositionOverride'));
 
+  // Fetch libraries
   useEffect(() => {
+    getDoc(doc(db, 'settings', 'avatars')).then(snap => { if (snap.exists()) setAvatarLibrary(snap.data().urls || []); });
+    getDoc(doc(db, 'settings', 'sounds')).then(snap => { if (snap.exists()) setSoundLibrary(snap.data().items || []); });
     getDoc(doc(db, 'settings', 'celebSounds')).then(snap => {
       if (snap.exists() && snap.data().items) setCelebSoundOptions(snap.data().items);
     });
@@ -102,7 +112,6 @@ export default function ThemeTab() {
     setIsSavingTheme(false);
   };
 
-  // RESTORED THE MISSING FUNCTIONS HERE
   const handlePreviewStart = () => {
     const modal = document.getElementById('admin-modal-container');
     if (modal) modal.style.opacity = '0';
@@ -113,6 +122,55 @@ export default function ThemeTab() {
     if (modal) modal.style.opacity = '1';
   };
 
+  // --- Avatar & Sound Library Handlers ---
+  const handleUploadToLibrary = async (e) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const optimizedBlob = await compressImage(file, 400, 400, 0.8);
+      const url = await uploadToCloudflare(optimizedBlob, `library_${Date.now()}.jpg`);
+      setAvatarLibrary(prev => [...prev, url]);
+      await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayUnion(url) }, { merge: true });
+    } catch (error) {
+      alert("Upload failed.");
+    }
+    setUploadingAvatar(false);
+  };
+
+  const handleDeleteFromLibrary = async (url) => {
+    if (!window.confirm("Remove this avatar from the library?")) return;
+    setAvatarLibrary(prev => prev.filter(u => u !== url));
+    await setDoc(doc(db, 'settings', 'avatars'), { urls: arrayRemove(url) }, { merge: true });
+  };
+
+  const handleUploadLibrarySound = async (e) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { 
+      return alert("⚠️ Audio file is too large. Please keep custom sounds under 5MB.");
+    }
+    const soundName = window.prompt("Give this signature sound a short name:");
+    if (!soundName) return;
+    setUploadingLibrarySound(true);
+    try {
+      const url = await uploadToCloudflare(file, `sound_${Date.now()}_${file.name}`);
+      setSoundLibrary(prev => [...prev, { name: soundName, url }]);
+      await setDoc(doc(db, 'settings', 'sounds'), { items: arrayUnion({ name: soundName, url }) }, { merge: true });
+    } catch (error) {
+      alert("Upload failed.");
+    }
+    setUploadingLibrarySound(false);
+    e.target.value = '';
+  };
+
+  const handleDeleteLibrarySound = async (soundObj) => {
+    if (!window.confirm(`Remove "${soundObj.name}" from library?`)) return;
+    setSoundLibrary(prev => prev.filter(s => s.url !== soundObj.url));
+    await setDoc(doc(db, 'settings', 'sounds'), { items: arrayRemove(soundObj) }, { merge: true });
+  };
+
+  // --- Celebration Uploads ---
   const handleVideoUpload = async (e) => {
     const file = e.target?.files?.[0];
     if (!file) return;
@@ -182,9 +240,19 @@ export default function ThemeTab() {
 
   return (
     <div className="space-y-6 max-w-2xl pb-12">
-      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6 border border-slate-200 shadow-inner">
-        <button onClick={() => setActiveTab('theme')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'theme' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Palette className="w-4 h-4" /> App Theme</button>
-        <button onClick={() => setActiveTab('celebration')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'celebration' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}><Wand2 className="w-4 h-4" /> Celebration FX</button>
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6 border border-slate-200 shadow-inner overflow-x-auto hide-scrollbar">
+        <button onClick={() => setActiveTab('theme')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'theme' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <Palette className="w-4 h-4" /> App Theme
+        </button>
+        <button onClick={() => setActiveTab('celebration')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'celebration' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <Wand2 className="w-4 h-4" /> Celebration FX
+        </button>
+        <button onClick={() => setActiveTab('avatars')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'avatars' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <ImageIcon className="w-4 h-4" /> Avatar Library
+        </button>
+        <button onClick={() => setActiveTab('sounds')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'sounds' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <Music className="w-4 h-4" /> Sound Library
+        </button>
       </div>
 
       {activeTab === 'theme' && (
@@ -192,7 +260,6 @@ export default function ThemeTab() {
           <div className="flex justify-between items-start">
             <div><h3 className="text-xl font-bold mb-1 text-slate-800 flex items-center gap-2">Visual Customization</h3><p className="text-slate-500 text-sm">Select presets or upload a custom background.</p></div>
             
-            {/* THIS BUTTON NOW WORKS! */}
             <button 
               onMouseDown={handlePreviewStart} 
               onMouseUp={handlePreviewEnd} 
@@ -381,6 +448,60 @@ export default function ThemeTab() {
               {isSavingCeleb ? <Loader2 className="w-5 h-5 animate-spin" /> : (celebSaved ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />)} 
               {isSavingCeleb ? 'Saving...' : (celebSaved ? 'Effects Saved!' : 'Save Effects')}
             </button>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'avatars' && (
+        <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2"><ImageIcon className="w-5 h-5 text-indigo-500" /> Default Avatar Library</h3>
+              <p className="text-xs text-slate-500 mt-1">Images uploaded here will be available for kids to choose from in their profile modal.</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+            {avatarLibrary.map((url, idx) => (
+              <div key={idx} className="relative aspect-square rounded-xl border-2 border-slate-200 overflow-hidden group bg-slate-50 shadow-sm">
+                <img src={url} alt="Library Avatar" className="w-full h-full object-cover" />
+                <button onClick={() => handleDeleteFromLibrary(url)} className="absolute top-1 right-1 bg-rose-500/90 text-white p-1 rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 cursor-pointer"><X className="w-3 h-3" /></button>
+              </div>
+            ))}
+            <label className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 flex flex-col items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-100 hover:border-indigo-400 transition-colors shadow-sm">
+              {uploadingAvatar ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
+              <span className="text-[10px] font-bold uppercase tracking-wider mt-1">{uploadingAvatar ? '...' : 'Upload'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleUploadToLibrary} disabled={uploadingAvatar} />
+            </label>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'sounds' && (
+        <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2"><Music className="w-5 h-5 text-indigo-500" /> Signature Sound Library</h3>
+              <p className="text-xs text-slate-500 mt-1">Short audio files (MP3/WAV) uploaded here can be selected by kids as their chore completion sound.</p>
+            </div>
+            <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold cursor-pointer hover:bg-indigo-100 transition-colors shadow-sm text-sm shrink-0">
+              {uploadingLibrarySound ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {uploadingLibrarySound ? 'Uploading...' : 'Upload Sound (Max 5MB)'}
+              <input type="file" accept="audio/*" className="hidden" onChange={handleUploadLibrarySound} disabled={uploadingLibrarySound} />
+            </label>
+          </div>
+          
+          <div className="space-y-2 mt-4">
+            {soundLibrary.length === 0 && <div className="text-center p-6 text-slate-400 font-medium bg-slate-50 rounded-xl border border-slate-100">No custom sounds added yet. Use the System Tools tab to restore defaults!</div>}
+            {soundLibrary.map((sound, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => playAudio(sound.url)} className="text-indigo-500 hover:text-indigo-700 transition-colors cursor-pointer"><PlayCircle className="w-6 h-6" /></button>
+                  <span className="font-bold text-slate-700">{sound.name}</span>
+                </div>
+                <button onClick={() => handleDeleteLibrarySound(sound)} className="text-slate-400 hover:text-rose-500 transition-colors p-1 cursor-pointer bg-white rounded-md shadow-sm border border-slate-100"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
           </div>
         </section>
       )}
