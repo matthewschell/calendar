@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Save, Play, Plus, Trash2, Type, Palette, Wand2, X, Loader2, CheckCircle2, Image as ImageIcon, Video, Music, PlayCircle } from 'lucide-react';
+import { Save, Play, Plus, Trash2, Type, Palette, Wand2, X, Loader2, CheckCircle2, Image as ImageIcon, Video, Music, PlayCircle, Upload } from 'lucide-react';
 import { doc, getDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { useCelebration, EFFECTS, CELEB_PALETTES, DEFAULT_CELEBRATION } from '../../hooks/useCelebration';
+import { useCelebration, EFFECTS, CELEB_PALETTES, DEFAULT_CELEBRATION, POPULAR_EMOJIS } from '../../hooks/useCelebration';
 import { useTheme, THEME_PRESETS, FONT_OPTIONS } from '../../hooks/useTheme';
 import { compressImage } from '../../utils/imageCompression';
 import { uploadToCloudflare } from '../../utils/cloudflareUploader';
@@ -390,7 +390,7 @@ export default function ThemeTab() {
                   </div>
                   
                   <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50 text-indigo-600 font-bold cursor-pointer hover:bg-indigo-100 hover:border-indigo-300 transition-colors">
-                    {uploadingSound ? <Loader2 className="w-5 h-5 animate-spin" /> : <Music className="w-5 h-5" />}
+                    {uploadingSound ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
                     {uploadingSound ? 'Uploading...' : 'Upload Own Audio (Max 5MB)'}
                     <input type="file" accept="audio/*" className="hidden" onChange={handleCustomAudioUpload} disabled={uploadingSound} />
                   </label>
@@ -414,10 +414,44 @@ export default function ThemeTab() {
                             {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
                           </select>
                         </div>
+                        
+                        {/* ROBUST EMOJI PICKER IMPLEMENTATION */}
                         {layer.type === 'emoji' ? (
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Type an Emoji 🦄🐾🚗</label>
-                            <input type="text" maxLength="2" value={layer.emojiChar || '😀'} onChange={(e) => updateLayer(index, 'emojiChar', e.target.value)} className="w-full p-2 text-2xl text-center border border-slate-200 rounded-lg focus:border-indigo-500" />
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Select Emojis (Max 3)</label>
+                              <span className="text-[9px] text-slate-400">{(layer.emojis || []).length}/3</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px] bg-slate-50 border border-slate-200 rounded-lg p-1.5">
+                              {(layer.emojis || []).map((emo, i) => (
+                                <span key={i} className="bg-white border border-slate-200 shadow-sm text-sm px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  {emo} 
+                                  <button type="button" onClick={() => {
+                                    const newEmojis = (layer.emojis || []).filter((_, idx) => idx !== i);
+                                    updateLayer(index, 'emojis', newEmojis);
+                                  }} className="text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"><X className="w-3 h-3"/></button>
+                                </span>
+                              ))}
+                              {(layer.emojis || []).length === 0 && <span className="text-xs text-slate-400 italic py-0.5 px-1">None selected</span>}
+                            </div>
+                            
+                            <div className="grid grid-cols-8 sm:grid-cols-10 gap-1 h-32 overflow-y-auto custom-scrollbar p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                              {POPULAR_EMOJIS.map(emo => (
+                                <button 
+                                  key={emo}
+                                  type="button"
+                                  onClick={() => {
+                                    const current = layer.emojis || [];
+                                    if (current.length < 3 && !current.includes(emo)) {
+                                      updateLayer(index, 'emojis', [...current, emo]);
+                                    }
+                                  }}
+                                  className="hover:bg-white hover:shadow-sm rounded p-1 text-xl transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
+                                >
+                                  {emo}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         ) : (
                           <div>

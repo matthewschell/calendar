@@ -12,7 +12,7 @@ export const EFFECTS = [
   { id: 'rain', label: '🎊 Confetti Rain' },
   { id: 'snow', label: '❄️ Drifting Snow' },
   { id: 'center-burst', label: '🎆 Center Spinner' },
-  { id: 'emoji', label: '😀 Custom Emoji / Character' }
+  { id: 'emoji', label: '😀 Custom Emojis' }
 ];
 
 export const CELEB_PALETTES = [
@@ -22,6 +22,13 @@ export const CELEB_PALETTES = [
   { id: 'pastel', label: 'Spring Pastels', colors: ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9', '#bae1ff'] },
   { id: 'blizzard', label: 'Winter Blizzard', colors: ['#ffffff', '#e0f2fe', '#bae6fd', '#7dd3fc'] },
   { id: 'schell', label: 'Schell Family', colors: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'] }
+];
+
+export const POPULAR_EMOJIS = [
+  '😀','😂','🥰','😎','🥳','🤩','🤡','👻','👽','🤖',
+  '🦄','🐾','🦋','🦖','🐙','🦈','🍕','🍔','🍟','🍦',
+  '🍩','🧁','⚽','🏀','🎮','🎸','🚀','🏎️','🚁','✨',
+  '🔥','🎉','🎈','⭐','❤️','💩','👑','💎','💰','🏆'
 ];
 
 export const DEFAULT_CELEBRATION = {
@@ -110,16 +117,24 @@ export function useCelebration() {
     activeLayers.forEach(layer => {
       const pCount = Math.max(1, Math.round(5 * layer.intensity)); 
       
-      const customShape = layer.type === 'emoji' && layer.emojiChar 
-        ? confetti.shapeFromText({ text: layer.emojiChar, scalar: layer.scale * 2 }) 
-        : null;
+      // Parse custom emojis into canvas-confetti shapes
+      const customShapes = [];
+      if (layer.type === 'emoji') {
+        const emojisToUse = (layer.emojis && layer.emojis.length > 0) 
+          ? layer.emojis 
+          : (layer.emojiChar ? [layer.emojiChar] : ['😀']); // Fallback for old configurations
+        
+        emojisToUse.forEach(emo => {
+          customShapes.push(confetti.shapeFromText({ text: emo, scalar: layer.scale * 2 }));
+        });
+      }
 
       const launchConfetti = (opts) => {
         confetti({
           ...opts,
           colors: layer.colors,
-          scalar: layer.type === 'emoji' ? 1 : layer.scale, 
-          shapes: customShape ? [customShape] : (layer.type === 'fireworks' ? ['star'] : ['square', 'circle']),
+          scalar: layer.type === 'emoji' ? 1 : layer.scale, // Emoji scales via shapeFromText
+          shapes: layer.type === 'emoji' ? customShapes : (layer.type === 'fireworks' ? ['star'] : ['square', 'circle']),
           zIndex: 100002
         });
       };

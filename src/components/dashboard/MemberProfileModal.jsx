@@ -6,7 +6,7 @@ import { db } from '../../config/firebase';
 import { compressImage } from '../../utils/imageCompression';
 import { uploadToCloudflare } from '../../utils/cloudflareUploader';
 import { playAudio } from '../../utils/audioPlayer';
-import { EFFECTS, CELEB_PALETTES, DEFAULT_CELEBRATION, useCelebration } from '../../hooks/useCelebration';
+import { EFFECTS, CELEB_PALETTES, DEFAULT_CELEBRATION, POPULAR_EMOJIS, useCelebration } from '../../hooks/useCelebration';
 
 const DEFAULT_DING_URL = "https://pub-c502b7afe8da4d518eea03a57bdd6e60.r2.dev/Soundfx/ding.mp3";
 
@@ -157,7 +157,7 @@ export default function MemberProfileModal({ member, onClose }) {
   const handleCustomAudioUpload = async (e) => {
     const file = e.target?.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { // INCREASED TO 5MB
+    if (file.size > 5 * 1024 * 1024) { 
       return alert("⚠️ Audio file is too large. Please keep custom sounds under 5MB.");
     }
     setUploadingSound(true);
@@ -468,10 +468,44 @@ export default function MemberProfileModal({ member, onClose }) {
                                       {EFFECTS.map(eff => <option key={eff.id} value={eff.id}>{eff.label}</option>)}
                                     </select>
                                   </div>
+                                  
+                                  {/* ROBUST EMOJI PICKER IMPLEMENTATION */}
                                   {layer.type === 'emoji' ? (
                                     <div>
-                                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Type an Emoji 🦄🐾🚗</label>
-                                      <input type="text" maxLength="2" value={layer.emojiChar || '😀'} onChange={(e) => updateLayer(index, 'emojiChar', e.target.value)} className="w-full p-2 text-2xl text-center border border-slate-200 rounded-lg focus:border-indigo-500" />
+                                      <div className="flex justify-between items-center mb-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Select Emojis (Max 3)</label>
+                                        <span className="text-[9px] text-slate-400">{(layer.emojis || []).length}/3</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px] bg-slate-50 border border-slate-200 rounded-lg p-1.5">
+                                        {(layer.emojis || []).map((emo, i) => (
+                                          <span key={i} className="bg-white border border-slate-200 shadow-sm text-sm px-2 py-0.5 rounded-md flex items-center gap-1">
+                                            {emo} 
+                                            <button type="button" onClick={() => {
+                                              const newEmojis = (layer.emojis || []).filter((_, idx) => idx !== i);
+                                              updateLayer(index, 'emojis', newEmojis);
+                                            }} className="text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"><X className="w-3 h-3"/></button>
+                                          </span>
+                                        ))}
+                                        {(layer.emojis || []).length === 0 && <span className="text-xs text-slate-400 italic py-0.5 px-1">None selected</span>}
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-8 sm:grid-cols-10 gap-1 h-32 overflow-y-auto custom-scrollbar p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                        {POPULAR_EMOJIS.map(emo => (
+                                          <button 
+                                            key={emo}
+                                            type="button"
+                                            onClick={() => {
+                                              const current = layer.emojis || [];
+                                              if (current.length < 3 && !current.includes(emo)) {
+                                                updateLayer(index, 'emojis', [...current, emo]);
+                                              }
+                                            }}
+                                            className="hover:bg-white hover:shadow-sm rounded p-1 text-xl transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
+                                          >
+                                            {emo}
+                                          </button>
+                                        ))}
+                                      </div>
                                     </div>
                                   ) : (
                                     <div>
